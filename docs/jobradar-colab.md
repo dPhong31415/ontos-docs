@@ -1,225 +1,226 @@
 ---
 id: jobradar-colab
-title: Colab Workflow
-sidebar_label: 👥 Colab Workflow
-sidebar_position: 5
+title: Làm việc cùng nhau (2 dev)
+sidebar_label: 👥 Colab & Claude Code
+sidebar_position: 6
 ---
 
-# Colab Workflow — 2 Dev
+# Làm việc cùng nhau
+
+> Trang này dành cho **2 dev** và **Claude Code agent**. Giải thích ai làm gì, làm thế nào để không giẫm lên nhau, và cách dùng Claude Code hiệu quả.
 
 ---
 
-## Phân công zone
+## Phân chia vùng trách nhiệm
+
+**Nguyên tắc:** Dev A không đụng file của Dev B và ngược lại. File "Shared" thì phải hẹn nhau trước.
 
 ### Dev A — Frontend
+Chịu trách nhiệm giao diện người dùng.
+
 ```
-app/(app)/dashboard/       → job grid, cards, filters, choose/skip
-app/(app)/tracker/         → tracker page + side panel + tasks
-app/(app)/scrape/          → scrape UI
-app/(app)/sources/         → sources config UI
-app/(app)/template/        → template form UI
-app/(app)/team/            → team management UI
-app/(app)/shares/          → shares UI
-app/(auth)/                → sign-in/up (Clerk)
-app/(legal)/               → terms, privacy, refunds
-app/share/[token]/         → public share page
-app/page.tsx               → root redirect / landing page
-components/                → ChatSidebar, ProposalPanel, DeepPanel, ScrapeCrew
+app/(app)/dashboard/    → trang chính: job cards, filters, choose/skip
+app/(app)/tracker/      → theo dõi apply: kanban + side panel + tasks
+app/(app)/scrape/       → trang trigger scrape
+app/(app)/template/     → form tạo/sửa template
+app/(app)/team/         → quản lý thành viên team
+app/(app)/shares/       → quản lý share links
+app/(auth)/             → trang đăng nhập/đăng ký
+app/(legal)/            → /terms /privacy /refunds
+app/share/[token]/      → trang public cho người nhận share
+app/page.tsx            → trang chủ (hiện đang redirect)
+components/             → ChatSidebar, ProposalPanel, DeepPanel, ScrapeCrew
 ```
 
 ### Dev B — Backend
+Chịu trách nhiệm API, database, AI logic, scrapers.
+
 ```
-app/api/                   → tất cả API routes
-lib/models/                → Mongoose schemas
-lib/entitlements.ts        → tier matrix + credit helpers
-lib/byteplus.ts            → LLM gateway (KHÔNG sửa models list nếu không confirm)
-lib/claude-runner.ts       → parseJSON utility + runClaude proxy
-lib/workspace.ts           → getOrCreatePersonalWorkspace()
-lib/analyze.ts             → analyzeJobBatch
-lib/deep-analyze.ts        → runDeepAnalysis
-lib/keyword-generator.ts   → generateKeywords + reflectAndUpdateMemory
-lib/extract-job-url.ts     → URL → job extraction
-lib/agent/                 → Radar agent (graph + tools)
-lib/sources.ts             → source list + colors
-runner/                    → Render Python server
-scripts/                   → scrapers Python
+app/api/                → tất cả API routes
+lib/models/             → Mongoose schemas (16 models)
+lib/entitlements.ts     → logic tier/credit (KHÔNG sửa nếu không confirm A)
+lib/byteplus.ts         → AI gateway (KHÔNG thêm/xóa model nếu không confirm)
+lib/claude-runner.ts    → utility parseJSON + runClaude proxy
+lib/workspace.ts        → helper tạo workspace
+lib/analyze.ts          → chấm điểm job hàng loạt
+lib/deep-analyze.ts     → deep analysis
+lib/keyword-generator.ts → sinh keywords + memory reflection
+lib/extract-job-url.ts  → extract job từ URL bất kỳ
+lib/agent/              → Radar chat agent
+lib/sources.ts          → danh sách sources + màu sắc
+runner/                 → Render Python server
+scripts/                → Python scrapers
 ```
 
-### Shared — phải hẹn trước khi sửa
+### Shared — hẹn trước khi sửa
+File nào cả 2 đều có thể cần động vào. Trước khi sửa phải nói với người kia.
+
 ```
-app/(app)/layout.tsx       → app shell + nav
-lib/models/index.ts        → model exports
-lib/mongodb.ts             → DB connection
-proxy.ts                   → Clerk middleware
-package.json               → dependencies
-vercel.json                → cron config
+app/(app)/layout.tsx    → nav bar, app shell
+lib/models/index.ts     → export models (thêm ở cuối, đừng reorder)
+lib/mongodb.ts          → kết nối DB
+proxy.ts                → Clerk middleware (auth guard)
+package.json            → dependencies
+vercel.json             → cron config
 ```
 
 ---
 
-## Git workflow hàng ngày
+## Git workflow
 
+### Quy trình cơ bản
+
+```
+main (production) ──────────────────────────────►
+                    ↑              ↑
+              merge PR        merge PR
+                    │              │
+feat/A-chat-layout ─┘    feat/B-billing-webhook ─┘
+```
+
+**Bước 1:** Cắt branch mới từ main
 ```bash
-# Bắt đầu feature mới
-git checkout main
-git pull origin main
-git checkout -b feat/A-chat-layout    # Dev A
+git checkout main && git pull
+git checkout -b feat/A-mô-tả-ngắn    # Dev A
 # hoặc
-git checkout -b feat/B-billing-webhook  # Dev B
-
-# Code, commit...
-git add <files>
-git commit -m "feat: mô tả ngắn gọn"
-
-# Push → Vercel tự tạo Preview URL
-git push origin feat/A-chat-layout
-# → Preview: jobradar-<hash>-dphongnguyen31415....vercel.app
-
-# Khi xong → mở PR trên GitHub → người kia review → merge
+git checkout -b feat/B-mô-tả-ngắn    # Dev B
 ```
 
-**Quy tắc commit message:**
-```
-feat:  tính năng mới
-fix:   bug fix
-chore: dependency, config, non-code
-docs:  tài liệu
+**Bước 2:** Code, commit khi xong 1 mảng nhỏ
+```bash
+git add <chỉ file mình đang làm>
+git commit -m "feat: mô tả rõ ràng"
 ```
 
----
-
-## Checklist trước mỗi push
-
-```
-□ npx tsc --noEmit  → pass (không có type error)
-□ npm run test:unit → 11 tests pass
-□ Không có workspaceId: null trong tạo job/template mới
-□ Tính năng paid → gọi getEntitlements() → gate đúng
-□ Tính năng credit → có refund trong catch block
-□ Route mới → có requireSession() (trừ route public)
-□ Route public mới → thêm vào proxy.ts isPublic matcher
-□ KHÔNG tạo middleware.ts (sẽ conflict với proxy.ts → build fail)
-□ KHÔNG commit .env, secrets
+**Bước 3:** Push → Vercel tự tạo Preview URL riêng
+```bash
+git push origin feat/A-mô-tả-ngắn
+# → Preview: jobradar-abc123-dphongnguyen...vercel.app
+# → Test trên URL đó, KHÔNG đụng production
 ```
 
----
+**Bước 4:** Mở Pull Request → người kia review → merge vào main → production tự deploy
 
-## Tránh conflict
+### Quy tắc bắt buộc
 
-**File hay conflict nhất:**
+- ❌ **Không push thẳng vào main** — chỉ qua PR
+- ❌ **Không push nhiều lần liên tiếp** — gộp hết thay đổi, push 1 lần/batch (Vercel Hobby ~100 deploy/ngày)
+- ✅ **Commit message rõ ràng:** `feat:`, `fix:`, `chore:`, `docs:`
+- ✅ **Resolve conflict bằng rebase:** `git pull --rebase` rồi fix
 
-| File | Cách tránh |
-|------|-----------|
-| `dashboard/page.tsx` | A sửa UI components, B sửa data hooks — không overlap |
-| `lib/sources.ts` | Merge nhanh, file nhỏ |
-| `lib/entitlements.ts` | B owns logic, A chỉ đọc `ent.*` trong UI |
-| `lib/models/index.ts` | Luôn thêm ở cuối file |
-| `package.json` | Một người install một lúc, commit lock file cùng |
-
-**Khi bị conflict:**
+### Khi bị conflict
 ```bash
 git fetch origin
 git rebase origin/main
-# Resolve conflict
-git add <file>
+# Mở file conflict → tìm <<<< ==== >>>> → chọn giữ cái nào
+git add <file đã fix>
 git rebase --continue
 git push --force-with-lease
 ```
 
 ---
 
-## Vercel Preview & Production
+## Checklist trước mỗi push
 
-| Branch | Deploy | URL |
-|--------|--------|-----|
-| `feat/*` | Preview (auto) | `jobradar-<hash>-....vercel.app` |
-| `main` | Production (auto) | `jobradar-orcin.vercel.app` |
+Chạy cái này trước khi push, nếu fail thì fix trước:
 
-**Quota:** ~100 deploys/ngày (Vercel Hobby). Gộp commit → push 1 lần.
+```bash
+npx tsc --noEmit          # Không có TypeScript error
+npm run test:unit         # 11 unit tests phải pass
+```
+
+Và tự check bằng mắt:
+```
+□ Route mới → có requireSession() chưa? (trừ route public)
+□ Route public mới → đã thêm vào proxy.ts chưa?
+□ Tạo job/template mới → dùng workspace thật, không workspaceId: null
+□ Tính năng paid → có gọi getEntitlements() chưa?
+□ Tính năng credit → có refund trong catch block chưa?
+□ TUYỆT ĐỐI không tạo middleware.ts (conflict với proxy.ts → build fail)
+```
 
 ---
 
 ## Dùng Claude Code như dev team
 
-Claude Code đọc `.claude/CLAUDE.md` tự động mỗi session. **Subagents theo role** để phân công như team thật:
+Claude Code tự đọc `CLAUDE.md` khi bắt đầu session. Nó biết rules, tech stack, và các quyết định đã chốt.
 
-| Subagent | Dùng khi | Tools |
-|---------|----------|-------|
-| `frontend-engineer` | Sửa UI, components, pages | Read/Edit/Write/Bash(build) |
-| `backend-engineer` | API routes, models, entitlements | Read/Edit/Write/Bash |
-| `devops` | Vercel, Render, env, deploy, Mongo indexes | Read/Edit/Bash |
-| `qa-test` | Viết/chạy tests, reproduce bug | Read/Bash(tests) |
-| `reviewer` | `/code-review` trước merge | Read-only |
+### Cách giao task hiệu quả
 
-**Vòng lặp SOTA (plan mode):**
+**Không hiệu quả:**
 ```
-1. /plan — thiết kế trước khi code (cho feature > 2 file)
-2. Subagent implement trên branch feat/*
-3. /code-review — review trước merge
-4. qa-test chạy test cases
-5. PR → merge main
+"Fix the bug in the dashboard"
 ```
 
-**Skills có sẵn (gõ /tên):**
-- `/deploy` — gate → build → push 1 lần (tránh lố quota)
-- `/code-review` — review diff, có thể dùng `ultra` cho thay đổi lớn
-
-**Khi giao task cho Claude:**
+**Hiệu quả:**
 ```
-"Làm feat/B-entitlement-gate — gate route /api/jobs/[id]/deep
-theo zone Dev B. Đọc .claude/team.md trước."
+"Tôi cần gate route POST /api/presets để chỉ Personal+ mới tạo được.
+Zone Dev B. Đọc lib/entitlements.ts để hiểu pattern gate đang dùng,
+rồi áp dụng tương tự như route /api/jobs/[id]/deep đã làm."
 ```
 
-**Claude sẽ:**
-1. Đọc `CLAUDE.md` → rules
-2. Đọc `.claude/team.md` → zone ownership
-3. Đọc `.claude/decisions.md` → quyết định đã chốt (không re-argue)
-4. Đọc `.claude/status.md` → trạng thái hiện tại
-5. Làm trong zone được phân công, không đụng file zone khác
+**Template giao task:**
+```
+Tôi cần [mô tả tính năng].
+Zone: Dev A (frontend) hoặc Dev B (backend).
+Files liên quan: [list file nếu biết].
+Tham khảo: [file tương tự đã implement].
+Không được đụng: [file nào không được sửa].
+```
 
-**Files `.claude/` quan trọng:**
+### Subagents theo role
 
-| File | Nội dung |
+Claude Code có thể chạy như các "role" khác nhau:
+
+| Dùng khi... | Cách gọi |
+|-------------|---------|
+| Thiết kế feature lớn (>2 file) | `/plan` trước khi code |
+| Build UI component | Nói "zone Dev A, làm trong components/" |
+| Build API route | Nói "zone Dev B, làm trong app/api/" |
+| Review trước merge | `/code-review` |
+| Tìm bug | Mô tả triệu chứng, Claude tìm root cause |
+
+### Files `.claude/` Claude tự đọc
+
+| File | Chứa gì |
 |------|---------|
-| `CLAUDE.md` | Rules + stack + test + git + security + checklist |
-| `.claude/team.md` | Zone ownership + workflow colab |
-| `.claude/status.md` | Trạng thái hiện tại + next steps |
+| `CLAUDE.md` | Rules tuyệt đối, tech stack, checklist commit |
+| `.claude/team.md` | Zone ownership (file này) |
+| `.claude/decisions.md` | Quyết định kỹ thuật đã chốt — **KHÔNG re-argue** |
+| `.claude/status.md` | Trạng thái hiện tại, next steps |
 | `.claude/_map.md` | Sơ đồ thư mục + data flows |
-| `.claude/decisions.md` | Quyết định kỹ thuật đã chốt (LLM, tenancy, billing...) |
+
+**Tại sao có decisions.md?** Để Claude không hỏi lại "tại sao không dùng Stripe?" hay "tại sao không dùng Claude API?" mỗi lần. Những quyết định này đã được cân nhắc kỹ, có lý do rõ ràng, không cần debate lại.
 
 ---
 
-## Claude Code Hooks (harness rules)
+## Vercel Preview vs Production
 
-Dự án cấu hình hooks trong `.claude/settings.json` (nếu có):
+| Branch | Kết quả | URL |
+|--------|---------|-----|
+| `feat/A-*` hoặc `feat/B-*` | Preview deploy tự động | `jobradar-<hash>-....vercel.app` |
+| `main` | Production deploy tự động | `jobradar-orcin.vercel.app` |
 
-- **Pre-push:** `tsc --noEmit` + `npm run test:unit` chạy tự động
-- **Stop:** lint check
-- **Chặn:** commit thẳng `main`, tạo `middleware.ts`
-
-Nếu hook fail → Claude dừng lại, giải thích lỗi, không bypass.
-
-**Các điều Claude KHÔNG làm:**
-- Không push thẳng `main` (phải qua PR)
-- Không amend commit đã push
-- Không `--no-verify` bypass hooks
-- Không xóa file chưa confirm
-- Không sửa file ngoài zone đang làm
+**Preview URL an toàn để test** — không ảnh hưởng production, dùng cùng database thật (attention: vẫn ghi vào DB thật, cẩn thận khi test delete).
 
 ---
 
-## Env vars cần set (Vercel Production)
+## Env vars — ai cần biết gì
 
-| Var | Ai cần biết | Ghi chú |
-|-----|-------------|---------|
-| `MONGODB_URI` | Dev B | Atlas connection string |
-| `ARK_API_KEY` | Dev B | BytePlus ARK |
-| `CLERK_SECRET_KEY` | Dev B | Clerk backend |
-| `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY` | Dev A | Clerk frontend |
-| `CLAUDE_RUNNER_URL` | Dev B | Render worker URL |
-| `CLAUDE_RUNNER_SECRET` | Dev B | Shared secret với Render |
-| `CRON_SECRET` | Dev B | Bảo vệ daily-scrape |
-| `BILLING_MOR_SECRET` | Dev B | Paddle/LemonSqueezy HMAC |
-| `BILLING_VN_SECRET` | Dev B | VNPay/MoMo HMAC |
+**Dev A** chỉ cần 2 cái để chạy local:
+- `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY` — Clerk frontend key
 
-Dev A không cần biết secrets backend. Dev A chỉ cần `NEXT_PUBLIC_*` và Clerk publishable key để test local.
+**Dev B** cần toàn bộ:
+
+| Var | Dùng cho |
+|-----|---------|
+| `MONGODB_URI` | Kết nối Atlas |
+| `ARK_API_KEY` | Gọi AI |
+| `CLERK_SECRET_KEY` | Auth backend |
+| `CLAUDE_RUNNER_URL` | URL của Render worker |
+| `CLAUDE_RUNNER_SECRET` | Xác thực giữa Vercel ↔ Render |
+| `CRON_SECRET` | Bảo vệ daily-scrape |
+| `BILLING_MOR_SECRET` | Verify webhook Paddle/LS |
+| `BILLING_VN_SECRET` | Verify webhook VNPay/MoMo |
+
+Lấy các giá trị này từ Vercel Dashboard hoặc hỏi project owner. **Không commit vào git.**

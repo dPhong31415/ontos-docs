@@ -2,192 +2,189 @@
 id: jobradar-roadmap
 title: Roadmap & Checklist
 sidebar_label: ✅ Roadmap & Checklist
-sidebar_position: 6
+sidebar_position: 7
 ---
 
-# Roadmap & Feature Checklist
+# Roadmap & Checklist
 
-Trạng thái: ✅ Done · 🔄 In progress · ⬜ Todo · ❌ Blocked
-
----
-
-## M0 — Lõi & LLM (✅ Done)
-
-**Backend (Dev B)**
-- ✅ Retire Claude CLI + Tailscale runner cho LLM
-- ✅ `runClaude()` → proxy `arkChat()` (BytePlus ARK)
-- ✅ Thread `type` + `userId` vào mọi call để log `Usage`
-- ✅ Bỏ `@anthropic-ai/sdk` khỏi `package.json`
-- ✅ `SeenJob` model — dedup scraper từ file local → MongoDB
-- ✅ `job_scraper.py` dùng `SeenJob` collection thay `~/.job-seen-*.json`
-- ✅ `GET /api/admin/cost-report` — đọc Usage ra bảng cost thật/feature
+> **Trang này là "bản đồ việc cần làm."** Đọc trước khi bắt đầu sprint mới để biết đang ở đâu và cần làm gì tiếp. Cập nhật khi hoàn thành việc.
 
 ---
 
-## M1 — Multi-tenancy (✅ Done)
+## Tổng quan tiến độ
 
-**Backend (Dev B)**
-- ✅ `Workspace` model: thêm `type`, `parentWorkspaceId` (dormant)
-- ✅ `lib/workspace.ts`: `getOrCreatePersonalWorkspace()`
-- ✅ `users/sync`: tự tạo personal workspace khi user đăng nhập lần đầu
-- ✅ `tracker/route.ts`: dùng workspace thay `workspaceId: null`
-- ✅ `jobs/import-url`: dùng workspace thay `null`
-- ✅ `POST /api/admin/migrate-workspaces` — backfill data cũ
+```
+M0 Lõi kỹ thuật  ██████████ ✅ Xong
+M1 Multi-tenant  ██████████ ✅ Xong (cần chạy migration)
+M2 Entitlements  ██████████ ✅ Xong
+M3 Billing       ████████░░ 🔄 90% — cần connect provider thật
+M4 Chat-first UX ███████░░░ 🔄 70% — layout xong, còn upgrade modal + landing
+M5 Team + Admin  ████░░░░░░ 🔄 40% — backend xong, frontend còn thiếu
+```
 
-**⬜ Còn chờ:**
-- ⬜ Chạy migration trên prod: `POST /api/admin/migrate-workspaces`
-
----
-
-## M2 — Entitlements & Credit (✅ Done)
-
-**Backend (Dev B)**
-- ✅ `Subscription` model
-- ✅ `CreditWallet` + `CreditLedger` model
-- ✅ `lib/entitlements.ts`: tier matrix + `getEntitlements()` + credit helpers
-- ✅ Gate `deep analysis` route (Personal+, 2 credit + refund on error)
-- ✅ Gate `propose/cover letter` route (Personal+, 1 credit + refund)
-- ✅ Gate `presets` POST (Personal+)
-- ✅ Analyze route: Free cap = 10 jobs, `meta.gated = true` khi vượt
-
-**Frontend (Dev A)**
-- ✅ Job card: hiện `🔒 upgrade to score` thay matchPct khi `meta.gated`
+**Critical path để ra tiền: M3 (connect payment provider thật).**  
+M4, M5 có thể làm song song.
 
 ---
 
-## M3 — Billing & Legal (✅ Done)
+## M0 — Lõi kỹ thuật ✅
 
-**Backend (Dev B)**
-- ✅ `POST /api/billing/webhook-mor` — Paddle/LemonSqueezy, HMAC verify
-- ✅ `POST /api/billing/webhook-vn` — VNPay/MoMo, HMAC verify
-- ✅ `GET /api/billing/credits` — balance + ledger
-- ✅ `BILLING_MOR_SECRET` + `BILLING_VN_SECRET` set trên Vercel
-- ⬜ Connect tài khoản Paddle hoặc LemonSqueezy thật
-- ⬜ Set webhook URL trong dashboard Paddle/LS
-- ⬜ Connect VNPay/MoMo → set IPN URL
+**Vấn đề M0 giải quyết:** App ban đầu dùng Claude CLI chạy trên laptop, expose qua Tailscale. Không thể serve nhiều user, không có khi laptop tắt. M0 migrate toàn bộ AI sang BytePlus ARK (cloud API).
 
-**Frontend (Dev A)**
-- ✅ `/terms` page
-- ✅ `/privacy` page
-- ✅ `/refunds` page
-- ⬜ Upgrade modal UI khi nhận 402 (`upgradeTo`)
-- ⬜ Credit balance hiển thị trong app
-- ⬜ Checkout flow UI (link sang Paddle/LS)
+**Backend — Dev B:**
+- ✅ `runClaude()` → proxy `arkChat()` — không còn gọi laptop
+- ✅ Thread `userId` + `type` vào mọi AI call để log Usage
+- ✅ Bỏ `@anthropic-ai/sdk` khỏi package.json
+- ✅ `SeenJob` model — dedup scraper lưu vào MongoDB (không còn `~/.job-seen-*.json`)
+- ✅ Scraper Python dùng `SeenJob` collection
+
+**Verify M0 done:** Tắt Render runner → chat, analyze, keyword-gen vẫn chạy bình thường qua ARK.
+
+**Còn lại:**
+- ⬜ **Chạy** `GET /api/admin/cost-report` để xem cost thật → chốt giá credit
 
 ---
 
-## M4 — Chat-first UX (🔄 In progress)
+## M1 — Multi-tenant ✅ (cần migration)
 
-**Frontend (Dev A)**
-- ✅ Chat sidebar → chuyển sang **bên trái** (primary)
-- ✅ Job grid ở bên phải (secondary)
-- ✅ Khi không có template: chỉ hiện chat (onboarding mode)
-- ✅ "✚ choose" button (set `applicationStatus: tracking`)
-- ✅ "✕ skip" button (notInterested)
-- ✅ Grid/List toggle
-- ✅ Gated card UI (`meta.gated` → 🔒)
-- ✅ `ProjectTasksPanel` trong tracker side panel
-- ⬜ Landing page (`app/page.tsx`) thay vì redirect thẳng
-- ⬜ Upgrade prompt UI khi nhận 402
-- ⬜ Credit balance badge trong header
-- ⬜ Mobile responsive
+**Vấn đề M1 giải quyết:** Trước đây, dữ liệu của user nằm ở `workspaceId: null` nghĩa là "personal mode". Cách này không scale được khi có nhiều user. M1 đảm bảo mọi user đều có Workspace rõ ràng.
 
-**Backend (Dev B)**
-- ✅ `ProjectTask` model + CRUD API `/api/jobs/[id]/tasks`
+**Backend — Dev B:**
+- ✅ `Workspace` thêm `type` field
+- ✅ Mỗi user đăng nhập lần đầu → tự tạo workspace personal
+- ✅ Các route tạo job mới dùng workspace thay `null`
+- ✅ Migration API: `POST /api/admin/migrate-workspaces`
+
+**Còn lại — cần làm ngay:**
+- ⬜ **Chạy migration trên prod:** `fetch('/api/admin/migrate-workspaces', {method:'POST'}).then(r=>r.json()).then(console.log)`
+- ⬜ **Chạy cleanup:** `fetch('/api/admin/cleanup-blank', {method:'POST'}).then(r=>r.json()).then(console.log)`
+
+---
+
+## M2 — Entitlements & Credit ✅
+
+**Vấn đề M2 giải quyết:** Chưa có gì ngăn Free user dùng tính năng trả phí. M2 build hệ thống gate tính năng và credit.
+
+**Backend — Dev B:**
+- ✅ `Subscription` + `CreditWallet` + `CreditLedger` models
+- ✅ `lib/entitlements.ts` — single source of truth cho tier limits
+- ✅ Deep analysis route: yêu cầu Personal+, tốn 2 credit, tự hoàn nếu lỗi
+- ✅ Cover letter route: yêu cầu Personal+, tốn 1 credit
+- ✅ Presets: yêu cầu Personal+
+- ✅ Analyze: Free chỉ chấm 10 job, còn lại `meta.gated: true`
+
+**Frontend — Dev A:**
+- ✅ Card hiện "🔒 upgrade to score" khi `meta.gated: true`
+- ⬜ **Upgrade modal** khi route trả về `402 { upgradeTo: "personal" }` → hiện popup "Nâng cấp để dùng tính năng này"
+- ⬜ **Credit balance** hiển thị ở đâu đó trong UI
+- ⬜ **Checkout flow** — button "Nâng cấp" link đến đâu?
+
+---
+
+## M3 — Billing 🔄 (90% backend xong, cần connect provider)
+
+**Vấn đề M3 giải quyết:** Có code nhận payment webhook rồi, nhưng chưa có tài khoản provider để test.
+
+**Backend — Dev B: ✅ Code xong**
+- ✅ Webhook Paddle/LemonSqueezy (xác thực HMAC, upsert Subscription, grant credit)
+- ✅ Webhook VNPay/MoMo
+- ✅ `BILLING_MOR_SECRET` + `BILLING_VN_SECRET` đã set trên Vercel
+- ✅ Legal pages: /terms /privacy /refunds
+
+**Còn lại — cần người có tài khoản:**
+- ⬜ **Đăng ký Paddle hoặc LemonSqueezy** (merchant account, verify ngân hàng VN)
+- ⬜ Set webhook URL: `https://jobradar-orcin.vercel.app/api/billing/webhook-mor`
+- ⬜ Test sandbox checkout → xác nhận entitlement update đúng
+- ⬜ **Đăng ký VNPay hoặc MoMo** business account
+- ⬜ Set IPN URL cho VN gateway
+- ⬜ Review legal pages — nội dung đủ chưa?
+
+---
+
+## M4 — Chat-first UX 🔄 (70%)
+
+**Vấn đề M4 giải quyết:** Trước đây UX là form-based, chat chỉ là sidebar phụ. M4 đưa chat thành giao diện chính.
+
+**Frontend — Dev A:**
+- ✅ Chat sidebar chuyển sang bên trái (primary)
+- ✅ Job grid bên phải (secondary)
+- ✅ Khi chưa có template → chỉ hiện chat (onboarding mode)
+- ✅ "✚ choose" button (add to tracker)
+- ✅ "✕ skip" button
+- ✅ Grid/List view toggle
+- ✅ Gated card UI (🔒)
+- ✅ ProjectTask panel trong tracker
+
+**Còn lại:**
+- ⬜ **Landing page** (`/`) — hiện đang redirect thẳng vào app, cần trang giới thiệu
+- ⬜ **Upgrade modal** — khi Deep Analysis bị block (trả 402), hiện modal đẹp thay vì im lặng
+- ⬜ **Mobile responsive** — layout hiện chỉ chạy đẹp trên desktop
+- ⬜ Filter sidebar đầy đủ (theo source, track, salary range)
+
+**Backend — Dev B:**
 - ✅ `create_template` agent tool
-- ✅ Agent system prompt: onboarding mode khi không có template
-- ✅ Agent phản hồi cùng ngôn ngữ user (Tiếng Việt)
+- ✅ Agent onboarding mode (hỏi 7 câu)
+- ✅ Agent phản hồi tiếng Việt
 
 ---
 
-## M5 — Team & Admin (✅ Done phần lớn)
+## M5 — Team & Admin 🔄 (40%)
 
-**Backend (Dev B)**
-- ✅ `Job.assigneeId` — giao job cho thành viên
-- ✅ `PATCH /api/jobs/[id]`: cho phép sửa `assigneeId`
-- ✅ `GET /api/admin/subscriptions`
+**Backend — Dev B: ✅ Xong**
+- ✅ `Job.assigneeId` — giao job
+- ✅ `GET /api/admin/subscriptions` — xem billing status
+- ✅ `GET /api/admin/cost-report` — xem cost thật
 
-**Frontend (Dev A)**
-- ⬜ UI giao job (dropdown chọn member trong card)
-- ⬜ Admin page: subscription/billing section
-- ⬜ Admin page: cost dashboard sử dụng `/api/admin/cost-report`
+**Frontend — Dev A: Chưa làm**
+- ⬜ **UI giao job cho teammate** — dropdown chọn member trong job card
+- ⬜ **Admin: subscription section** — hiện danh sách workspace + plan + credit balance
+- ⬜ **Admin: cost dashboard** — biểu đồ cost theo tính năng từ `/api/admin/cost-report`
+- ⬜ **Admin: scrape health** — scrape runs đang chạy, lỗi gần đây
 
 ---
 
-## Post-MVP — Backlog
+## Post-MVP — Backlog (không làm bây giờ)
 
-**Agentic / Memory**
-- ⬜ Capture loop: skip/apply/feedback → ghi `AgentMemory.userPatterns`
-- ⬜ Inject loop: keyword-gen đọc `AgentMemory` → prompt smarter
-- ⬜ Reflect job: scheduled job re-review skipped jobs
-- ⬜ Prune low-quality keywords (qualityScore < 0.1 sau 3 run)
+Những thứ này **đã có trong thiết kế** nhưng chưa cần cho launch:
 
-**MCP**
-- ⬜ MCP server endpoint tại `/api/mcp`
-- ⬜ Expose agent tools qua MCP (same tools, workspace-scoped)
+**Agent Memory Loop** (tự cải thiện)
+- Agent ghi `AgentMemory` sau mỗi skip/apply (capture)
+- `generateKeywords()` đọc memory vào prompt (inject) — *hiện chưa có*
+- Scheduled job review job bị skip → cập nhật pattern (reflect)
+
+**MCP Server**
+- Expose agent tools qua `/api/mcp` → partner/tool khác có thể dùng jobradar
+
+**Agent-core tách repo**
+- Khi contract API ổn định, tách `lib/agent/` + `lib/byteplus.ts` thành repo riêng
 
 **Marketplace**
-- ⬜ `Asset` + `Purchase` model
-- ⬜ CV/cover-letter template packs (mua lẻ)
-- ⬜ Marketplace page
+- `Asset` + `Purchase` model
+- Bán mẫu CV/cover-letter theo item
 
-**Khác**
-- ⬜ Agent-core tách repo riêng
-- ⬜ Custom domain (không phải `jobradar-orcin.vercel.app`)
-- ⬜ Annual plan + referral
-- ⬜ Mobile/PWA
-- ⬜ More sources (topCV, Glints, CareerViet đã có scraper)
-- ⬜ B2B2B `parentWorkspaceId` (code có sẵn, chỉ cần UI)
+**Khác:** annual plan, referral, mobile app, thêm nguồn scrape
 
 ---
 
-## Legal & Compliance Checklist (trước khi mở bán)
+## Launch checklist — điều kiện mở bán
 
-**Trang pháp lý**
-- ✅ `/terms` — Terms of Service
-- ✅ `/privacy` — Privacy Policy
-- ✅ `/refunds` — Refund Policy (3-day MBG cho new subs)
-- ⬜ Review nội dung với luật sư (nếu cần)
-- ⬜ Cookie banner (nếu serve EU users)
+Tất cả phải xanh trước khi charge tiền user thật:
 
-**Thanh toán**
-- ⬜ Đăng ký tài khoản Paddle hoặc LemonSqueezy
-- ⬜ Verify business + ngân hàng VN để rút tiền
-- ⬜ Tạo product + pricing trên MoR dashboard
-- ⬜ Set webhook URL → test sandbox checkout
-- ⬜ Đăng ký VNPay hoặc MoMo business account
-- ⬜ Test IPN + sandbox VN gateway
+**Technical:**
+- ⬜ `npm run test:unit` pass (11 tests)
+- ⬜ E2E: auth redirect, legal pages accessible, share page
+- ⬜ Manual: onboarding → scrape → analyze → choose → tracker flow hoạt động end-to-end
+- ⬜ Free tier: job thứ 11 không có matchPct (gated)
+- ⬜ Paid: deep analysis trừ credit → lỗi → hoàn credit
+- ⬜ Webhook sandbox: checkout → entitlement update
 
-**Data**
-- ⬜ Confirm BytePlus ARK ToS: nhiều tài khoản free có vi phạm không?
-- ⬜ GDPR: user có thể request delete account + data
-- ⬜ Xác nhận không store raw card data (đang delegate MoR — OK)
+**Business:**
+- ⬜ Payment provider account đã verify ngân hàng VN
+- ⬜ Legal pages reviewed (Terms, Privacy, Refund Policy)
+- ⬜ Custom domain (không phải `-orcin.vercel.app`)
+- ⬜ Vercel Pro hoặc xác nhận Hobby đủ dùng
 
-**Infra**
-- ⬜ Custom domain (jobradar.vn hoặc tương tự)
-- ⬜ Upgrade Vercel Hobby → Pro ($20/mo) cho `maxDuration 300s`
-- ⬜ Render free → paid để hết cold start
-- ⬜ Alert khi ARK quota cạn (hiện throw lỗi nhưng chưa có Slack/email alert)
-- ⬜ MongoDB backup policy
-
----
-
-## Test cases cần pass trước launch
-
-**Unit (npm run test:unit)**
-- ✅ `FEATURE_CREDITS` values đúng
-- ✅ `parseJSON` xử lý đúng các format LLM trả về
-- ✅ Cost math: heavy user < $1/month
-
-**E2E (npm run test:e2e)**
-- ✅ Unauthenticated → redirect sign-in
-- ✅ Legal pages public
-- ✅ Share invalid token → 404 hoặc error
-- ⬜ Tracker double panel regression (cần `TEST_STORAGE_STATE`)
-
-**Manual**
-- ⬜ New user → chat onboarding → tạo template → scrape → analyze → card
-- ⬜ Free user → 11th job không có matchPct (gated)
-- ⬜ Paid user → deep analysis trừ credit → error → hoàn credit
-- ⬜ Checkout sandbox → entitlement update live
-- ⬜ Team: invite member → giao job → share link claim
+**Observability:**
+- ⬜ Alert khi ARK quota cạn (hiện throw error nhưng chưa ping đâu)
+- ⬜ Alert khi Render worker fail
+- ⬜ Admin có thể refund user thủ công

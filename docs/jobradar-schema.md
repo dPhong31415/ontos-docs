@@ -1,365 +1,348 @@
 ---
 id: jobradar-schema
-title: Schema & Models
-sidebar_label: 🗄 Schema & Models
+title: Database Schema
+sidebar_label: 🗄 Database Schema
 sidebar_position: 3
 ---
 
-# Schema & Models
+# Database Schema
 
-Tất cả schema dùng Mongoose, DB: MongoDB Atlas, database name: `jobagent`.
+> Trang này giải thích **tại sao mỗi model tồn tại, nó quan hệ với model khác thế nào, và các field quan trọng cần chú ý**. Đọc phần "Quan hệ giữa các model" trước khi đọc từng model.
+
+---
+
+## Quan hệ giữa các model
+
+```
+User ──────────── sở hữu ──────────────► Workspace (1 personal + n team)
+  │                                           │
+  │                                      có Subscription (billing)
+  │                                      có CreditWallet (số dư credit)
+  │                                      có Membership[] (ai thuộc về)
+  │
+Workspace ─── chứa ──► JobTemplate (hồ sơ tìm việc)
+                            │
+                            ├─── sinh ra ──► Job[] (các job đã scrape)
+                            │                  │
+                            │              có ProjectTask[] (task breakdown)
+                            │
+                            ├─── tạo ra ──► ScrapeRun[] (lịch sử scrape)
+                            │
+                            ├─── có ──────► AgentMemory (AI học từ user)
+                            └─── có ──────► KeywordMemory[] (hiệu quả keyword)
+```
+
+**Đọc theo hướng này:** User có Workspace → Workspace có Template → Template sinh Job. Mọi query đều cần filter theo `userId` hoặc `workspaceId` để tenant isolation.
 
 ---
 
 ## User
 
-File: `lib/models/User.ts` · Collection: `users`
+> Đại diện cho 1 người dùng. Được tạo tự động khi user đăng nhập qua Clerk lần đầu.
 
-| Field | Type | Mô tả |
-|-------|------|-------|
-| `clerkUserId` | String (unique) | ID từ Clerk, dùng để lookup user |
-| `email` | String | Email đăng nhập |
-| `displayName` | String | Tên hiển thị |
-| `color` | String | Màu avatar (default `#7c6af7`) |
-| `lastActiveAt` | Date | Lần cuối dùng app |
-| `createdAt` | Date | Auto (timestamps) |
+File: `lib/models/User.ts`
+
+| Field | Ý nghĩa |
+|-------|---------|
+| `clerkUserId` | ID từ Clerk (dùng để tìm user khi nhận request) |
+| `email` | Email đăng nhập |
+| `displayName` | Tên hiển thị trong app |
+| `color` | Màu avatar |
+| `lastActiveAt` | Theo dõi user có còn active không |
 
 ---
 
 ## Workspace
 
-File: `lib/models/Workspace.ts` · Collection: `workspaces`
+> **Đây là đơn vị tenant.** Mỗi user có ít nhất 1 workspace "personal". Team chia sẻ chung 1 workspace. Mọi dữ liệu (job, template, billing) gắn với workspace, không phải user trực tiếp.
 
-| Field | Type | Mô tả |
-|-------|------|-------|
-| `name` | String | Tên workspace (vd "Personal", "Team XYZ") |
-| `slug` | String (unique) | URL-safe ID, auto-gen từ userId (vd `personal-a1b2c3d4`) |
-| `ownerId` | ObjectId → User | Người tạo |
-| `plan` | `"free"` / `"personal"` / `"team"` / `"enterprise"` | Gói hiện tại, sync từ Subscription |
-| `type` | `"personal"` / `"team"` / `"org"` | Loại workspace |
-| `logoUrl` | String | URL logo (optional) |
-| `clerkOrgId` | String | ID tổ chức Clerk (nếu dùng Clerk org) |
-| `inviteToken` | String | Token mời thành viên |
-| `parentWorkspaceId` | ObjectId → Workspace | Dự phòng B2B2B (hiện null) |
+File: `lib/models/Workspace.ts`
 
-**Lưu ý:** Mỗi user khi đăng nhập lần đầu tự có 1 workspace `type:"personal"`. Gọi `getOrCreatePersonalWorkspace(userId)` từ `lib/workspace.ts`.
+| Field | Ý nghĩa |
+|-------|---------|
+| `name` | Tên hiển thị (vd "Phong's workspace") |
+| `slug` | URL-safe ID, tự sinh từ userId (vd `personal-a1b2c3d4`) |
+| `ownerId` | User tạo workspace này |
+| `plan` | `free` / `personal` / `team` / `enterprise` — **cập nhật qua webhook billing** |
+| `type` | `personal` (1 người) / `team` (nhiều người) / `org` (B2B, chưa dùng) |
+| `parentWorkspaceId` | Dự phòng B2B2B, hiện null |
+
+**Quan trọng:** Gọi `getOrCreatePersonalWorkspace(userId)` từ `lib/workspace.ts` để lấy workspace của user. Không tự query trực tiếp vì hàm này tự tạo nếu chưa có.
 
 ---
 
 ## Membership
 
-File: `lib/models/Membership.ts` · Collection: `memberships`
+> Nối User ↔ Workspace với role. Dùng cho Team plan khi nhiều người cùng workspace.
 
-| Field | Type | Mô tả |
-|-------|------|-------|
-| `workspaceId` | ObjectId → Workspace | |
-| `userId` | ObjectId → User | |
-| `role` | `"owner"` / `"admin"` / `"member"` / `"viewer"` | Quyền hạn |
-| `invitedBy` | ObjectId → User | Ai mời |
-| `joinedAt` | Date | |
-
-Index unique: `(workspaceId, userId)`
+| Field | Ý nghĩa |
+|-------|---------|
+| `workspaceId` | |
+| `userId` | |
+| `role` | `owner` / `admin` / `member` / `viewer` |
+| `invitedBy` | Ai mời người này vào |
 
 ---
 
 ## JobTemplate
 
-File: `lib/models/JobTemplate.ts` · Collection: `jobtemplates`
+> **"CV hồ sơ tìm việc" của user.** Đây là input cho mọi thứ: scraper dùng nó để biết cần scrape gì, AI dùng nó để biết cần chấm điểm dựa trên tiêu chí nào.
 
-"CV hồ sơ tìm việc" của user — agent dùng cái này để scrape + analyze.
+File: `lib/models/JobTemplate.ts`
 
-| Field | Type | Mô tả |
-|-------|------|-------|
-| `userId` | ObjectId → User | Chủ template |
-| `workspaceId` | ObjectId → Workspace | Workspace chứa |
-| `name` | String | Tên template (vd "Phong — Production 2026") |
-| `isDefault` | Boolean | Template mặc định khi scrape/analyze |
-| `isActive` | Boolean | Có đang dùng không |
-| `requirementText` | String | Free-text mô tả bản thân (Claude đọc để sinh keywords) |
-| `tracks` | String[] | Mảng track: `production`, `code`, `art`, `design`, `music`, `writing` |
-| `skills` | String[] | Kỹ năng cụ thể: `["After Effects", "Cinema 4D", "Blender"]` |
-| `experience` | String | Level: `junior`, `mid`, `senior`, `lead` |
-| `jobTypes` | String[] | Loại: `freelance`, `contract`, `full-time`, `part-time` |
-| `minSalaryUsdHr` | Number | Lương tối thiểu (USD/giờ), 0 = không giới hạn |
-| `mustBeRemote` | Boolean | Chỉ lấy remote |
-| `locations` | String[] | Địa điểm ưa thích |
-| `languages` | String[] | Ngôn ngữ: `["English", "Vietnamese"]` |
-| `hardNO` | String[] | Từ khoá loại bỏ: `["gaming", "crypto", "children"]` |
-| `generatedKeywords` | String[] | Keywords do AI sinh ra (generic, cho mọi source) |
-| `platformKeywords` | Map\<string, string[]> | Keywords tối ưu cho từng source (`{"linkedin": [...], "remoteok": [...]}`) |
-| `keywordsGeneratedAt` | Date | Lần cuối regenerate keywords |
-| `keywordsVersion` | Number | Tăng mỗi lần regenerate |
-| `activeSources` | String[] | Nguồn đang bật: `["linkedin", "remoteok", "himalayas"]` |
-| `blockedCompanies` | String[] | Công ty bị block riêng của template này |
-| `urlWatchList` | String[] | URL cụ thể để watch (ATS pages) |
-| `scrapeSchedule` | String | Cron schedule (default `"0 8 * * *"`) |
-| `lastScrapedAt` | Date | |
-| `lastAnalyzedAt` | Date | |
+**Phần user nhập (qua chat onboarding hoặc form):**
+
+| Field | Ý nghĩa | Ví dụ |
+|-------|---------|-------|
+| `requirementText` | Free-text mô tả bản thân, AI đọc để hiểu ngữ cảnh | "Tôi là motion designer 5 năm, giỏi AE và C4D..." |
+| `tracks` | Mảng ngành nghề | `["production", "art"]` |
+| `skills` | Kỹ năng cụ thể | `["After Effects", "Cinema 4D"]` |
+| `experience` | Level | `junior` / `mid` / `senior` / `lead` |
+| `jobTypes` | Loại công việc mong muốn | `["freelance", "contract"]` |
+| `minSalaryUsdHr` | Lương tối thiểu (USD/giờ) | `35` |
+| `mustBeRemote` | Chỉ lấy remote | `true` |
+| `languages` | Ngôn ngữ làm việc | `["English", "Vietnamese"]` |
+| `hardNO` | Tuyệt đối không muốn | `["gaming", "crypto"]` |
+
+**Phần AI sinh ra (user có thể chỉnh):**
+
+| Field | Ý nghĩa |
+|-------|---------|
+| `generatedKeywords` | Từ khoá tổng quát cho mọi nguồn |
+| `platformKeywords` | Từ khoá tối ưu riêng cho từng nguồn: `{"linkedin": [...], "remoteok": [...]}` |
+| `keywordsVersion` | Tăng mỗi lần AI regenerate keywords |
+
+**Cấu hình scrape:**
+
+| Field | Ý nghĩa |
+|-------|---------|
+| `activeSources` | Nguồn nào đang bật: `["linkedin", "remoteok", "himalayas"]` |
+| `blockedCompanies` | Công ty không muốn thấy |
+| `scrapeSchedule` | Cron schedule tự động (default 8h sáng hàng ngày) |
 
 ---
 
 ## Job
 
-File: `lib/models/Job.ts` · Collection: `jobs`
+> **Một listing job đã được scrape về.** Có 2 giai đoạn: mới scrape về (chưa analyzed) và đã được AI chấm điểm (analyzed). User tương tác với job qua dashboard cards.
 
-| Field | Type | Mô tả |
-|-------|------|-------|
-| `jobId` | String | Hash MD5 của title\|company\|url |
-| `url` | String | URL job gốc (dùng để dedup) |
-| `source` | String | Nguồn: `linkedin`, `remoteok`, `himalayas`, `reddit`, `manual`... |
-| `userId` | ObjectId → User | Chủ |
-| `workspaceId` | ObjectId → Workspace | Workspace |
-| `templateId` | ObjectId → JobTemplate | Template tìm ra job này |
-| `scrapeRunId` | ObjectId → ScrapeRun | Run nào tìm ra |
-| `title` | String | Tên vị trí |
-| `company` | String | Tên công ty |
-| `salary` | Mixed | `{ display: "$30-50/hr" }` hoặc string |
-| `description` | String | Mô tả job |
-| `techStack` | String[] | Tech stack phát hiện được |
-| `seniority` | String | `junior`, `mid`, `senior`, `lead` |
-| `remote` | Boolean | Có remote không |
-| `scrapedAt` | Date | Thời điểm scrape |
-| `freshJob` | Boolean | `true` = mới scrape, chưa seen trước đó |
-| `seenCount` | Number | Đã xuất hiện bao nhiêu lần trong các run |
-| `analyzed` | Boolean | Đã được AI chấm điểm chưa |
-| `matchPct` | Number | % phù hợp (0-100), do AI tính |
-| `action` | `"apply"` / `"save"` / `"skip"` / null | Khuyến nghị của AI |
-| `track` | String | Track phát hiện: `production`, `code`, `art`... |
-| `skillsMatched` | String[] | Kỹ năng khớp với profile user |
-| `moat` | String | Lý do ngắn gọn vì sao nên/không nên apply |
-| `whyYou` | String[] | Điểm mạnh của user với job này |
-| `redFlags` | String[] | Cờ đỏ (công ty mờ ám, lương thấp...) |
-| `meta.reasoning` | String | Reasoning đầy đủ của AI |
-| `meta.confidence` | Number | Độ tự tin AI (0-100) |
-| `meta.gated` | Boolean | `true` = Free tier đã hết 10 job, không chấm nữa |
-| `meta.deepAnalysis` | Object | Kết quả deep analysis (xem dưới) |
-| `applied` | Boolean | User đã apply chưa |
-| `appliedAt` | Date | |
-| `notInterested` | Boolean | User bấm Skip |
-| `skipReason` | String | Lý do skip |
-| `applicationStatus` | `"tracking"` / `"applied"` / `"screening"` / `"interview"` / `"offer"` / `"rejected"` | Pipeline ứng tuyển |
-| `applicationNotes` | String | Ghi chú của user |
-| `applicationUrl` | String | URL apply (override url gốc) |
-| `assigneeId` | ObjectId → User | Giao cho ai (Team plan) |
+File: `lib/models/Job.ts`
 
-**Index quan trọng:**
-- `(userId, url)` unique — dedup per user
-- `(userId, action, matchPct)` — query jobs tab
-- `(workspaceId, action, matchPct)` — team mode
+**Thông tin scrape về:**
+
+| Field | Ý nghĩa |
+|-------|---------|
+| `jobId` | Hash MD5 của `title\|company\|url` — dùng để dedup |
+| `url` | URL gốc của job |
+| `source` | Nguồn: `linkedin`, `remoteok`, `himalayas`, `reddit`, `manual`... |
+| `title`, `company` | |
+| `salary` | `{ display: "$30-50/hr" }` |
+| `description` | Mô tả job |
+| `freshJob` | `true` = job mới chưa ai thấy, `false` = đã seen trước đó |
+
+**Kết quả AI chấm (sau khi Analyze):**
+
+| Field | Ý nghĩa |
+|-------|---------|
+| `analyzed` | Đã chấm chưa (`false` = đang chờ analyze) |
+| `matchPct` | % phù hợp với profile user (0–100) |
+| `action` | Khuyến nghị của AI: `"apply"` / `"save"` / `"skip"` / `null` |
+| `track` | AI phân loại ngành: `production`, `code`, `art`... |
+| `skillsMatched` | Kỹ năng nào của user khớp job này |
+| `moat` | Lý do ngắn: tại sao nên/không nên apply |
+| `whyYou` | Điểm mạnh của user so với yêu cầu job |
+| `redFlags` | Cờ đỏ: công ty mờ ám, lương thấp, on-site... |
+| `meta.gated` | `true` = Free tier đã vượt 10 job, không được chấm |
+| `meta.deepAnalysis` | Kết quả deep analysis chi tiết (nếu đã chạy) |
+
+**Trạng thái user tương tác:**
+
+| Field | Ý nghĩa |
+|-------|---------|
+| `notInterested` | User bấm Skip → ẩn khỏi grid |
+| `applicationStatus` | Pipeline: `tracking` → `applied` → `screening` → `interview` → `offer` / `rejected` |
+| `applicationNotes` | Ghi chú cá nhân |
+| `assigneeId` | Giao cho teammate nào (Team plan) |
+
+**Quy tắc hiển thị trên card:**
+
+| Điều kiện | Hiển thị |
+|-----------|---------|
+| `action:"apply"` + `matchPct >= 70` | Badge "TOP PICK" |
+| `action:"skip"` | Badge "Skipped" |
+| `meta.gated: true` | Hiện info nhưng không có % — "🔒 upgrade to score" |
+| `notInterested: true` | Ẩn khỏi grid (trừ tab Skipped) |
 
 ---
 
 ## SeenJob
 
-File: `lib/models/SeenJob.ts` · Collection: `seenjobs`
+> Lưu hash của mọi job đã thấy để không scrape trùng. Trước đây lưu trong file `~/.job-seen-*.json` trên máy laptop (sau khi migrate M0 giờ lưu MongoDB).
 
-Dedup scraper — thay file `~/.job-seen-*.json` (không còn dùng).
-
-| Field | Type | Mô tả |
-|-------|------|-------|
-| `templateId` | ObjectId → JobTemplate | |
-| `hash` | String | MD5 của title\|company\|url |
-| `seenAt` | Date | |
-
-Index unique: `(templateId, hash)`
+| Field | Ý nghĩa |
+|-------|---------|
+| `templateId` | Hash này thuộc về template nào |
+| `hash` | MD5 của `title\|company\|url` |
 
 ---
 
 ## ScrapeRun
 
-File: `lib/models/ScrapeRun.ts` · Collection: `scraperuns`
+> Lịch sử mỗi lần scrape. Vercel cron và user thủ công đều tạo ScrapeRun.
 
-| Field | Type | Mô tả |
-|-------|------|-------|
-| `templateId` | ObjectId | |
-| `userId` | ObjectId | |
-| `workspaceId` | ObjectId | |
-| `status` | `"pending"` / `"scraping"` / `"analyzing"` / `"done"` / `"error"` / `"stopped"` | |
-| `triggeredBy` | String | `"manual"`, `"cron"`, `"api"` |
-| `scraped` | Number | Số job đã scrape |
-| `analyzed` | Number | Số job đã analyze |
-| `startedAt` | Date | |
-| `scrapedAt` | Date | |
-| `analyzedAt` | Date | |
+| Field | Ý nghĩa |
+|-------|---------|
+| `status` | `pending` → `scraping` → `analyzing` → `done` / `error` / `stopped` |
+| `triggeredBy` | `manual`, `cron`, `api` |
+| `scraped` | Bao nhiêu job đã kéo về |
+| `analyzed` | Bao nhiêu job đã được AI chấm |
 
 ---
 
 ## Subscription
 
-File: `lib/models/Subscription.ts` · Collection: `subscriptions`
+> Trạng thái billing của 1 workspace. **Được tạo/update tự động qua webhook** từ Paddle hoặc VNPay — không tự tạo bằng tay.
 
-| Field | Type | Mô tả |
-|-------|------|-------|
-| `workspaceId` | ObjectId (unique) | Mỗi workspace 1 subscription |
-| `provider` | `"paddle"` / `"lemonsqueezy"` / `"vnpay"` / `"momo"` / `"manual"` | |
-| `externalId` | String | ID subscription của provider |
-| `plan` | `"free"` / `"personal"` / `"team"` / `"enterprise"` | |
-| `status` | `"active"` / `"trialing"` / `"past_due"` / `"canceled"` / `"incomplete"` | |
-| `seats` | Number | Số slot thành viên (Team plan) |
-| `currentPeriodEnd` | Date | Hết hạn kỳ hiện tại |
-| `cancelAtPeriodEnd` | Boolean | Có tự hủy sau kỳ này không |
-| `metadata` | Mixed | Raw event từ provider để debug |
+| Field | Ý nghĩa |
+|-------|---------|
+| `workspaceId` | Mỗi workspace có tối đa 1 subscription |
+| `provider` | `paddle` / `lemonsqueezy` / `vnpay` / `momo` / `manual` |
+| `externalId` | ID subscription của provider (dùng để tra cứu khi nhận webhook) |
+| `plan` | `free` / `personal` / `team` |
+| `status` | `active` / `trialing` / `past_due` / `canceled` |
+| `currentPeriodEnd` | Hết hạn lúc nào — nếu qua ngày này mà chưa gia hạn → hạ xuống free |
+| `cancelAtPeriodEnd` | User đã hủy nhưng còn dùng đến hết kỳ |
 
 ---
 
 ## CreditWallet & CreditLedger
 
-Files: `lib/models/CreditWallet.ts` · Collections: `creditwallets`, `creditleaders`
+> **CreditWallet** là số dư hiện tại. **CreditLedger** là lịch sử mọi giao dịch (như sao kê ngân hàng).
 
-**CreditWallet** — số dư hiện tại:
+**CreditWallet:**
 
-| Field | Type | Mô tả |
-|-------|------|-------|
-| `workspaceId` | ObjectId (unique) | |
-| `balance` | Number | Số credit còn (integer, min 0) |
-| `updatedAt` | Date | |
+| Field | Ý nghĩa |
+|-------|---------|
+| `workspaceId` | Mỗi workspace 1 ví |
+| `balance` | Số credit còn (integer, không âm) |
 
-**CreditLedger** — lịch sử giao dịch:
+**CreditLedger** (mỗi giao dịch là 1 document):
 
-| Field | Type | Mô tả |
-|-------|------|-------|
-| `workspaceId` | ObjectId | |
-| `delta` | Number | Dương = nạp, âm = tiêu |
-| `reason` | String | `"spend"`, `"purchase"`, `"plan_grant"`, `"refund"` |
-| `feature` | String | `"deep_analysis"`, `"cover_letter"`, `"cv_file"`... |
-| `refId` | ObjectId | ID job/order để trace |
-| `createdAt` | Date | |
+| Field | Ý nghĩa |
+|-------|---------|
+| `delta` | Dương = nạp vào, âm = tiêu đi |
+| `reason` | `spend` / `purchase` / `plan_grant` / `refund` |
+| `feature` | Tính năng nào dùng: `deep_analysis`, `cover_letter`... |
+| `refId` | ID job/order để trace |
 
-**Credit cost mặc định** (trong `lib/entitlements.ts`):
+**Chi phí tính năng hiện tại:**
 
-| Feature | Credit |
-|---------|--------|
-| `deep_analysis` | 2 |
-| `cover_letter` | 1 |
-| `cv_file` | 2 |
-| `market_research` | 1 |
-| `analyze_extra` | 0 (trong plan) |
+| Tính năng | Credit | Tương đương USD |
+|-----------|--------|-----------------|
+| Deep analysis | 2 | $0.02 (~2.5× cost thật) |
+| Cover letter | 1 | $0.01 (~3× cost thật) |
+| CV file | 2 | $0.02 |
+| Market research | 1 | $0.01 |
+
+⚠️ Số này cần cập nhật sau khi chạy `/api/admin/cost-report` để xem cost ARK thật.
 
 ---
 
 ## ProjectTask
 
-File: `lib/models/ProjectTask.ts` · Collection: `projecttasks`
+> Chia nhỏ công việc cho từng job đang track. Ví dụ: "Viết cover letter", "Research công ty", "Apply trên website".
 
-| Field | Type | Mô tả |
-|-------|------|-------|
-| `jobId` | ObjectId → Job | Job này thuộc về task nào |
-| `workspaceId` | ObjectId → Workspace | |
-| `assigneeId` | ObjectId → User | Giao cho ai |
-| `title` | String | Tên task (vd "Viết cover letter", "Research công ty") |
-| `estimateHours` | Number | Ước tính giờ làm |
-| `status` | `"todo"` / `"in_progress"` / `"done"` / `"blocked"` | |
-| `order` | Number | Thứ tự trong list |
-| `notes` | String | Ghi chú |
+| Field | Ý nghĩa |
+|-------|---------|
+| `jobId` | Task này thuộc về job nào |
+| `title` | Tên task |
+| `estimateHours` | Ước tính mất bao lâu |
+| `status` | `todo` → `in_progress` → `done` / `blocked` |
+| `order` | Thứ tự trong list |
+| `assigneeId` | Giao cho ai (Team plan) |
 
 ---
 
 ## Share
 
-File: `lib/models/Share.ts` · Collection: `shares`
+> Khi user muốn chia sẻ bundle job hoặc template cho người khác. Tạo ra 1 link public, người nhận click vào "Claim" để copy vào account của họ.
 
-| Field | Type | Mô tả |
-|-------|------|-------|
-| `token` | String (unique) | Token URL (vd `abc123`) → `/share/abc123` |
-| `fromUserId` | ObjectId → User | Người tạo share |
-| `workspaceId` | ObjectId | |
-| `type` | `"jobs"` / `"template"` | Loại share |
-| `title` | String | Tiêu đề hiển thị |
-| `itemCount` | Number | Số job/keyword |
-| `payload` | Mixed | Dữ liệu job/template được share |
-| `claims` | `[{ userId, claimedAt }]` | Ai đã nhận |
-| `expiresAt` | Date | Hết hạn |
-
----
-
-## Asset & Purchase *(post-MVP — marketplace)*
-
-File: `lib/models/Asset.ts` (chưa tạo) · Collections: `assets`, `purchases`
-
-**Asset** — mẫu CV/cover-letter bán lẻ:
-
-| Field | Type | Mô tả |
-|-------|------|-------|
-| `name` | String | Tên template (vd "Modern Creative CV") |
-| `type` | `"cv"` / `"cover_letter"` | Loại |
-| `previewUrl` | String | Ảnh preview |
-| `priceUsd` | Number | Giá bán ($) |
-| `createdBy` | ObjectId → User | Tác giả |
-| `isActive` | Boolean | Đang bán |
-
-**Purchase** — lịch sử mua:
-
-| Field | Type | Mô tả |
-|-------|------|-------|
-| `workspaceId` | ObjectId | |
-| `assetId` | ObjectId → Asset | |
-| `provider` | String | `"paddle"`, `"momo"`... |
-| `externalId` | String | ID order của provider |
-| `paidUsd` | Number | Giá đã trả |
-| `createdAt` | Date | |
+| Field | Ý nghĩa |
+|-------|---------|
+| `token` | Unique token trong URL: `/share/abc123` |
+| `type` | `jobs` (gói job) hoặc `template` (hồ sơ tìm việc) |
+| `payload` | Dữ liệu thực tế được share |
+| `claims` | Danh sách `[{ userId, claimedAt }]` — ai đã nhận |
+| `expiresAt` | Link hết hạn sau bao lâu |
 
 ---
 
 ## AgentMemory
 
-File: `lib/models/AgentMemory.ts` · Collection: `agentmemories`
+> **AI "nhật ký" học từ user.** Sau mỗi run, agent phân tích kết quả và ghi lại những gì học được. Lần sau, những ghi chú này được inject vào prompt để AI chính xác hơn.
 
-| Field | Type | Mô tả |
-|-------|------|-------|
-| `templateId` | ObjectId (unique) | Per template |
-| `userId` | ObjectId | |
-| `goodPatterns` | String[] | Pattern keyword cho kết quả tốt |
-| `badPatterns` | String[] | Pattern cần tránh |
-| `sourceInsights` | Map\<string, string> | Nhận xét từng source |
-| `userPatterns` | String[] | Sở thích suy ra từ hành vi apply/skip |
-| `companyPatterns` | String[] | Nhận xét công ty |
-| `reflections` | `[{ date, runId, text }]` | Nhật ký tự review sau mỗi run |
-| `bestKeywords` | String[] | Top 10 keyword theo qualityScore |
-| `worstKeywords` | String[] | Bottom 10 (ứng viên prune) |
-| `totalRunsAnalyzed` | Number | Tổng run đã qua |
-| `lastReflectionAt` | Date | |
-| `version` | Number | Tăng mỗi lần cập nhật |
+| Field | Ý nghĩa |
+|-------|---------|
+| `goodPatterns` | Những kiểu keyword/job cho kết quả tốt |
+| `badPatterns` | Những kiểu nên tránh |
+| `sourceInsights` | Nhận xét từng nguồn (vd "LinkedIn chủ yếu US-only") |
+| `userPatterns` | Sở thích user suy ra từ hành vi (vd "Hay skip job esports") |
+| `reflections` | Nhật ký sau mỗi run: "Tuần này thêm TouchDesigner, quality tăng 18%" |
+| `bestKeywords` | Top 10 keyword đang work tốt |
+| `worstKeywords` | Bottom 10 nên prune |
+
+**Hiện tại:** model đã có, nhưng chỉ mới đọc khi generate keywords. Phần ghi (capture → inject → reflect) là feature cần build tiếp.
 
 ---
 
 ## KeywordMemory
 
-File: `lib/models/KeywordMemory.ts` · Collection: `keywordmemories`
+> Track hiệu quả từng keyword theo thời gian. Keyword nào liên tục mang job tốt → giữ. Keyword nào cho toàn junk → bỏ.
 
-| Field | Type | Mô tả |
-|-------|------|-------|
-| `templateId` | ObjectId | |
-| `userId` | ObjectId | |
-| `keyword` | String | Keyword cụ thể |
-| `totalJobsFound` | Number | Tổng job tìm được từ keyword này |
-| `relevantJobs` | Number | Job được AI chấm apply/save |
-| `appliedJobs` | Number | Job user thực sự apply |
-| `skippedJobs` | Number | Job bị skip |
-| `qualityScore` | Number | `(relevantJobs×2 + appliedJobs×5) / totalJobsFound` (0-1) |
-| `agentNotes` | String | Ghi chú của AI về keyword này |
-| `runsUsed` | Number | Số run đã dùng keyword |
-| `lastUsedAt` | Date | |
-
-Index unique: `(templateId, keyword)`
+| Field | Ý nghĩa |
+|-------|---------|
+| `keyword` | Từ khoá cụ thể |
+| `totalJobsFound` | Tổng job tìm được qua keyword này |
+| `relevantJobs` | Bao nhiêu job được AI chấm apply/save |
+| `appliedJobs` | Bao nhiêu job user thực sự apply |
+| `qualityScore` | `(relevantJobs × 2 + appliedJobs × 5) / totalJobsFound` |
 
 ---
 
 ## Usage
 
-File: `lib/models/Usage.ts` · Collection: `usages`
+> Ghi lại mọi lần gọi AI. Dùng để tính cost thực tế và cấu hình giá credit.
 
-Mỗi lần gọi LLM ghi 1 record.
+| Field | Ý nghĩa |
+|-------|---------|
+| `type` | Tính năng nào gọi: `analyze` / `keyword_gen` / `chat` / `deep_analysis` |
+| `modelId` | Model ARK nào được chọn lần đó |
+| `tokensIn` / `tokensOut` | Token đã dùng |
+| `costUsd` | Chi phí ước tính |
+| `latencyMs` | Tốc độ response |
 
-| Field | Type | Mô tả |
-|-------|------|-------|
-| `workspaceId` | ObjectId | |
-| `userId` | ObjectId | |
-| `type` | `"analyze"` / `"keyword_gen"` / `"chat"` / `"deep_analysis"` | Loại call |
-| `modelId` | String | Model ARK đã dùng |
-| `label` | String | Label tự đặt (vd `"analyze 20"`, `"radar-chat"`) |
-| `tokensIn` | Number | Prompt tokens |
-| `tokensOut` | Number | Completion tokens |
-| `cached` | Number | Cached tokens |
-| `latencyMs` | Number | Thời gian response (ms) |
-| `costUsd` | Number | Chi phí ước tính (USD) |
-| `createdAt` | Date | |
+**Dùng để làm gì:** `GET /api/admin/cost-report` query collection này, group theo `type`, tính average cost/lần → đây là số thật để chốt giá credit.
+
+---
+
+## Asset & Purchase *(chưa build — post-MVP)*
+
+> Marketplace bán mẫu CV/cover-letter. User mua 1 lần, dùng mãi.
+
+**Asset** — mẫu đang bán:
+
+| Field | Ý nghĩa |
+|-------|---------|
+| `name` | Tên mẫu |
+| `type` | `cv` / `cover_letter` |
+| `priceUsd` | Giá |
+| `previewUrl` | Ảnh demo |
+
+**Purchase** — lịch sử mua:
+
+| Field | Ý nghĩa |
+|-------|---------|
+| `workspaceId` | Ai mua |
+| `assetId` | Mua cái gì |
+| `provider` | Qua provider nào |
+| `paidUsd` | Đã trả bao nhiêu |
