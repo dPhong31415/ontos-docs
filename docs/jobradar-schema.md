@@ -90,21 +90,30 @@ File: `lib/models/Workspace.ts`
 
 File: `lib/models/JobTemplate.ts`
 
-**Phần user nhập (qua chat onboarding hoặc form):**
+**Nguồn gốc dữ liệu:** User gõ 1 prompt tự do → AI extract ra các field bên dưới → hiện vào CV Modal → user xem lại và chỉnh tay → bấm OK → lưu vào DB. Không có field nào hardcode hay do hệ thống tự điền.
+
+**Prompt gốc của user:**
 
 | Field | Ý nghĩa | Ví dụ |
 |-------|---------|-------|
-| `requirementText` | Free-text mô tả bản thân, AI đọc để hiểu ngữ cảnh | "Tôi là motion designer 5 năm, giỏi AE và C4D..." |
+| `promptText` | Đúng nguyên văn prompt user đã gõ, lưu lại để debug và re-extract nếu cần | `"Tôi là motion designer 5 năm, giỏi AE và C4D, muốn remote $35/h"` |
+
+**Phần AI extract từ prompt (user có thể chỉnh trong CV Modal):**
+
+| Field | Ý nghĩa | Ví dụ |
+|-------|---------|-------|
+| `requirementText` | Tóm tắt lại prompt sau khi AI hiểu ngữ cảnh | `"Motion designer 5yr, AE+C4D, freelance remote min $35/h"` |
 | `tracks` | Mảng ngành nghề | `["production", "art"]` |
 | `skills` | Kỹ năng cụ thể | `["After Effects", "Cinema 4D"]` |
 | `experience` | Level | `junior` / `mid` / `senior` / `lead` |
-| `jobTypes` | Loại công việc mong muốn | `["freelance", "contract"]` |
-| `minSalaryUsdHr` | Lương tối thiểu (USD/giờ) | `35` |
-| `mustBeRemote` | Chỉ lấy remote | `true` |
+| `jobTypes` | Loại công việc mong muốn — giá trị hợp lệ: `freelance`, `contract`, `full_time`, `part_time` | `["freelance", "full_time"]` |
+| `locationTypes` | Loại hình làm việc chấp nhận — giá trị hợp lệ: `remote`, `hybrid`, `onsite` | `["remote", "hybrid"]` |
+| `minSalaryUsdHr` | Lương tối thiểu (USD/giờ) — dùng làm prefilter floor khi scrape | `35` |
+| `mustBeRemote` | Shorthand: chỉ lấy remote hoàn toàn (tương đương `locationTypes: ["remote"]`) — dùng làm prefilter | `true` |
 | `languages` | Ngôn ngữ làm việc | `["English", "Vietnamese"]` |
-| `hardNO` | Tuyệt đối không muốn | `["gaming", "crypto"]` |
+| `hardNO` | Tuyệt đối không muốn — dùng làm prefilter hard_no khi scrape | `["gaming", "crypto"]` |
 
-**Phần AI sinh ra (user có thể chỉnh):**
+**Phần AI sinh ra keywords (user có thể chỉnh trong CV Modal):**
 
 | Field | Ý nghĩa |
 |-------|---------|
@@ -117,7 +126,7 @@ File: `lib/models/JobTemplate.ts`
 | Field | Ý nghĩa |
 |-------|---------|
 | `activeSources` | Nguồn nào đang bật: `["linkedin", "remoteok", "himalayas"]` |
-| `blockedCompanies` | Công ty không muốn thấy |
+| `blockedCompanies` | Blacklist công ty — user tự quản lý, không do AI sinh, dùng làm prefilter khi scrape |
 | `scrapeSchedule` | Cron schedule tự động (default 8h sáng hàng ngày) |
 
 ---
@@ -186,16 +195,41 @@ File: `lib/models/Job.ts`
 
 ---
 
-## ScrapeRun
+## RunLog
 
-> Lịch sử mỗi lần scrape. Vercel cron và user thủ công đều tạo ScrapeRun.
+> **Lịch sử mọi loại tác vụ chạy nền** — scrape, analyze batch, AI agent task, keyword regen... Dùng chung 1 collection, phân biệt qua `runType`. Đủ general để làm log cho AI agent sau này.
+>
+> **Khác với `Usage`:** RunLog = log cấp session (1 task = 1 document, theo dõi trạng thái và kết quả). Usage = log cấp LLM call (1 lần gọi `arkChat()` = 1 document, theo dõi token và cost). 1 RunLog có thể sinh ra nhiều Usage (vd: analyze batch 1 RunLog → 5 Usage, mỗi Usage là 1 lần batch gọi AI).
+
+File: `lib/models/RunLog.ts`
+
+**Fields chung (mọi loại run):**
 
 | Field | Ý nghĩa |
 |-------|---------|
-| `status` | `pending` → `scraping` → `analyzing` → `done` / `error` / `stopped` |
-| `triggeredBy` | `manual`, `cron`, `api` |
-| `scraped` | Bao nhiêu job đã kéo về |
-| `analyzed` | Bao nhiêu job đã được AI chấm |
+| `runType` | Loại tác vụ: `scrape` / `analyze` / `keyword_gen` / `agent_task` / `deep_analysis` / `cover_letter` |
+| `workspaceId` | Workspace nào trigger |
+| `userId` | User nào trigger |
+| `templateId` | Template liên quan (nếu có) |
+| `status` | `pending` → `running` → `done` / `error` / `stopped` |
+| `triggeredBy` | `manual` / `cron` / `agent` / `api` |
+| `startedAt` | Thời điểm bắt đầu thực sự chạy |
+| `finishedAt` | Thời điểm kết thúc |
+| `durationMs` | Tổng thời gian chạy |
+| `stoppedByUser` | `true` nếu user bấm Dừng giữa chừng |
+| `error` | Message lỗi nếu thất bại |
+| `meta` | Object chứa dữ liệu riêng theo từng `runType` (xem bên dưới) |
+
+**`meta` theo từng `runType`:**
+
+| runType | meta chứa gì |
+|---------|------------|
+| `scrape` | `{ sources[], scraped, newJobs, blocked, prefiltered, stoppedByUser, sourceSummary: { linkedin: { found, new }, ... } }` |
+| `analyze` | `{ total, scored, gated, batchCount }` |
+| `keyword_gen` | `{ keywordsGenerated, platformCount, keywordsVersion }` |
+| `agent_task` | `{ taskName, toolCalls[], stepCount, finalAction }` |
+| `deep_analysis` | `{ jobId, stepCount }` |
+| `cover_letter` | `{ jobId, wordCount }` |
 
 ---
 
@@ -311,17 +345,37 @@ File: `lib/models/Job.ts`
 
 ## Usage
 
-> Ghi lại mọi lần gọi AI. Dùng để tính cost thực tế và cấu hình giá credit.
+> Ghi lại mọi lần gọi AI. Là nguồn sự thật duy nhất để kiểm soát token, tính cost thực tế, và debug sự cố AI. **Mọi lần gọi `arkChat()` đều phải tạo 1 document Usage.**
 
 | Field | Ý nghĩa |
 |-------|---------|
-| `type` | Tính năng nào gọi: `analyze` / `keyword_gen` / `chat` / `deep_analysis` |
-| `modelId` | Model ARK nào được chọn lần đó |
-| `tokensIn` / `tokensOut` | Token đã dùng |
-| `costUsd` | Chi phí ước tính |
-| `latencyMs` | Tốc độ response |
+| `requestId` | UUID sinh per-call — dùng để trace 1 request xuyên suốt log |
+| `userId` | Ai trigger call này |
+| `workspaceId` | Workspace nào |
+| `type` | Tính năng gọi: `prompt_extract` / `keyword_gen` / `analyze` / `deep_analysis` / `cover_letter` / `chat` |
+| `modelId` | Model ARK thực sự được dùng (sau rotation) |
+| `modelAttempts` | Số lần thử model trước khi thành công (1 = không cần retry, >1 = có model bị 429) |
+| `tokensIn` | Token input (bao gồm system prompt + context) |
+| `tokensOut` | Token output |
+| `cacheTokens` | Token đọc từ prompt cache (rẻ hơn ~10× so với tokensIn) |
+| `costUsd` | Chi phí ước tính theo giá model (đã tính cacheTokens với giá cache) |
+| `latencyMs` | Thời gian từ lúc gọi đến lúc nhận xong response |
+| `success` | `true` / `false` |
+| `error` | Message lỗi nếu `success: false` |
+| `promptSnippet` | 200 ký tự đầu của prompt — đủ để debug, không lưu toàn bộ |
+| `createdAt` | Timestamp |
 
-**Dùng để làm gì:** `GET /api/admin/cost-report` query collection này, group theo `type`, tính average cost/lần → đây là số thật để chốt giá credit.
+**Dùng để làm gì:**
+
+| Mục đích | Cách dùng |
+|---------|----------|
+| Kiểm soát chi phí | Group theo `type` → average `costUsd` → chốt giá credit |
+| Debug AI trả sai | Tìm theo `requestId` → xem `promptSnippet` + `modelId` + `error` |
+| Monitor quota ARK | Filter `modelAttempts > 1` → biết model nào hay bị 429 |
+| Theo dõi latency | P95 `latencyMs` theo `type` → phát hiện model chậm |
+| Cost per user | Group theo `userId` + `type` trong tháng |
+
+**Admin endpoint:** `GET /api/admin/cost-report` — query collection này, group theo `type` và `modelId`.
 
 ---
 

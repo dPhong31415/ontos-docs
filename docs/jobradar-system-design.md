@@ -50,114 +50,205 @@ jobradar gồm 3 thứ chạy riêng biệt:
 
 ---
 
-## Luồng 1: User Scrape job
+## Luồng 1: View Chat First — Onboarding & tạo profile
+
+Entry point duy nhất khi user mới vào app. Không có template → không thấy Jobs page.
+
+**UI:** khung input ở giữa. Bên dưới là các thẻ gợi ý tĩnh — không thay đổi, không do AI sinh ra — để user biết cần điền gì vào prompt:
+
+| Thẻ gợi ý |
+|-----------|
+| Chuyên môn của bạn là gì? |
+| Kinh nghiệm nghề nghiệp của bạn? |
+| Mức lương mong muốn? |
+| Loại hình làm việc (remote / hybrid / onsite)? |
+| Kỹ năng nổi bật của bạn? |
+
+User đọc thẻ → tự gõ prompt mô tả bản thân → submit. Không có vòng hỏi-đáp với AI.
 
 ```
-User bấm "Scrape" trên web
-  ↓
-POST /api/scrape/trigger
-  ↓ Web App gọi Render worker
-GET runner/scrape?config={keywords, sources, ...}
-  ↓ Worker chạy job_scraper.py
-  ↓ Scrape từng source: LinkedIn, RemoteOK, Indeed, Reddit...
-  ↓ Mỗi job: check SeenJob collection (đã thấy chưa?)
-  ↓ Nếu chưa seen → ghi vào MongoDB jobs collection
-  ↓ Emit SSE events → Web App → stream về browser
-User thấy "Đã thêm 47 jobs mới"
-```
-
-**Dedup hoạt động thế nào:** mỗi job có hash MD5 của `title|company|url`. Hash này lưu vào collection `seenjobs`. Lần sau scrape gặp job đó → skip, không ghi lại.
-
----
-
-## Luồng 2: AI chấm điểm (Analyze)
-
-```
-User bấm "Analyze"
-  ↓
-GET /api/analyze/[templateId] (SSE stream)
-  ↓ Lấy 20 jobs chưa analyzed
-  ↓ Gọi arkChat() với:
-    - System prompt: profile của user (skills, lương, hardNO...)
-    - User message: danh sách 20 jobs compact JSON
-  ↓ AI trả về JSON: [{jobId, matchPct, action, track, moat, whyYou, redFlags}]
-  ↓ Bulk update jobs trong MongoDB
-  ↓ Stream kết quả về browser realtime
-  ↓ Lặp lại cho batch tiếp theo
-User thấy cards xuất hiện dần với %
-```
-
-**Free tier gate:** đếm số jobs đã scored cho workspace. Khi vượt 10 → đánh `meta.gated: true`, không gọi AI nữa. Card vẫn hiện info nhưng không có matchPct.
-
----
-
-## Luồng 3: Chat với Radar agent
-
-```
-User gõ "Bỏ hết job gaming đi" hoặc "Show top picks"
+User gõ prompt tự do vào khung input
+  (ví dụ: "Tôi là video editor 5 năm AE+C4D, muốn freelance remote tối thiểu $35/h")
   ↓
 POST /api/chat
-  ↓ buildAgent(userId, templateId) → ReAct loop
-  ↓ Claude đọc system prompt + lịch sử chat + message của user
-  ↓ Quyết định có cần gọi tool không?
-    Nếu có → emit "TOOL: search_jobs | {action:'apply'}"
-    → Gọi tool → nhận kết quả → tiếp tục
-  ↓ Tối đa 3 tool calls/turn
-  ↓ Stream câu trả lời về browser từng từ
+  ↓ AI đọc prompt → extract: role, exp, skills, lương, preference
+  ↓ Gọi tool generate_keywords → sinh platformKeywords cho từng source
+  ↓ Hiện CV Modal (popup)
+      Điền sẵn thông tin AI extract được:
+        - Role / Track
+        - Kinh nghiệm (số năm)
+        - Kỹ năng (skills)
+        - Lương mong muốn
+        - Keywords (đã sinh)
+      User xem lại, chỉnh tay nếu cần
+  ↓ User bấm "OK" trên CV Modal
+  ↓ Gọi tool create_template → lưu JobTemplate vào DB (với data đã chỉnh)
+  ↓ Gọi Render worker (POST /api/scrape/trigger) → scrape chạy nền
+  ↓ SSE stream progress về browser:
+      - Progress bar từng source (LinkedIn 12/50, RemoteOK 8/20...)
+      - Số job tìm thấy tăng realtime
+      - Nhân vật 8-bit hoạt hình chạy/nhảy trong lúc chờ
+      - Nếu cold start: nhân vật ở trạng thái "đang thức dậy" (~50s)
+      - Nút "Dừng" hiện trong suốt quá trình scrape
+          User bấm → GET /api/scrape/stop?runId=Y
+          → Render worker nhận → SIGTERM process → emit event "stopped"
+          → Jobs đã tìm được trước đó vẫn được giữ lại trong DB
+Khi scrape xong hoặc bị dừng → chuyển sang View 2 (Jobs)
 ```
 
-**Onboarding mode:** khi user chưa có template, agent hỏi 7 câu (role, skills, lương...) → cuối cùng gọi tool `create_template` → tạo `JobTemplate` trong DB.
+**CV Modal — chi tiết:**
+- Hiện ra tự động sau khi AI sinh xong keywords, trước khi scrape
+- Là **bước bắt buộc** — scrape không chạy cho đến khi user bấm OK
+- Điền sẵn toàn bộ thông tin AI extract được từ prompt của user
+- User có thể chỉnh tay tất cả các trường trước khi confirm:
+
+| Trường | Nội dung |
+|--------|---------|
+| Role / Track | Vị trí tìm kiếm (vd: Motion Designer, Frontend Dev) |
+| Kinh nghiệm | Số năm kinh nghiệm |
+| Kỹ năng | Danh sách skills (vd: After Effects, Cinema 4D) |
+| Lương mong muốn | Mức tối thiểu (USD/h hoặc USD/tháng) |
+| Keywords | Các từ khoá sẽ dùng để scrape — có thể thêm/xoá |
+
+- Bấm **OK** → lưu `JobTemplate` vào DB → trigger scrape
+- Bấm **Back** → quay lại khung chat, không lưu gì
+
+**Scrape hoạt động chi tiết:**
+
+**1. Vercel gọi Render worker**
+```
+POST /api/scrape/trigger  (Next.js)
+  → GET runner/scrape?templateId=X&config=<json>&runId=Y  (Render, SSE)
+```
+Config gồm: `keywords`, `platform_keywords` (keywords riêng theo source), `sources`, `blocked_companies`, `pages_per_term`, `prefilter`, `mongo_uri`, `user_id`.
+
+**2. `job_scraper.py` emit event `start`** — báo danh sách sources và số keyword sắp dùng.
+
+**3. Lặp qua từng source:**
+
+```
+emit source_start  →  chạy scraper tương ứng  →  emit source_done / source_error
+```
+
+- Mỗi source có scraper riêng (`scrapers/linkedin.py`, `scrapers/remoteok.py`...)
+- **Tất cả source** đều phải dùng callback `on_job` → stream từng job ngay khi tìm thấy, không đợi hết source mới xử lý
+- Hiện tại LinkedIn đã dùng callback, các source còn lại cần refactor theo cùng pattern (⬜ việc cần làm)
+
+**Platform keywords:** mỗi source dùng keywords riêng nếu có (`platform_keywords.linkedin`, `platform_keywords.remoteok`...). Nếu không có thì dùng `keywords` chung.
+
+**4. Mỗi job qua 3 bước lọc trước khi lưu:**
+
+| Bước | Điều kiện lọc | Ghi chú |
+|------|--------------|---------|
+| **URL dedup** | URL đã thấy ở bất kỳ source nào trong run hiện tại → skip | Tránh cùng 1 job bị đếm 2 lần khi xuất hiện trên nhiều source |
+| **SeenJob dedup** | Hash MD5 đã có trong `seenjobs` (MongoDB, persistent qua các lần scrape) → skip, không emit job mới | Job cũ từ lần trước vẫn được `$inc seenCount` nhưng không hiện lên như job mới |
+| **Prefilter** (rẻ, không gọi mạng) | Các rule lọc **được AI extract từ prompt của user** khi tạo template, không hardcode | |
+| | `hard_no` match title → skip | AI extract từ prompt (vd: user viết "không muốn game/gambling") |
+| | `must_be_remote` = true + job rõ ràng on-site → skip | AI extract từ prompt; chỉ skip khi có tín hiệu rõ trong title hoặc 300 ký tự đầu description |
+| | Lương thấp hơn `min_salary_hr` >40% → skip | AI extract từ prompt; buffer 40% tránh skip nhầm khi job không ghi rõ |
+| | Không overlap với keyword stems → skip | AI extract từ prompt; chỉ áp dụng khi có ≥5 stems |
+| **Blocked company** | Tên công ty nằm trong blacklist của user → skip | User tự quản lý danh sách này, không phải AI sinh ra |
+
+**5. Lưu job vào MongoDB (`$setOnInsert` upsert theo URL):**
+```
+Nếu URL đã tồn tại → chỉ tăng seenCount (không ghi đè)
+Nếu URL mới → insert với:
+  analyzed: false
+  action: null
+  freshJob: true
+  scrapedAt: now
+  + toàn bộ metadata: title, company, source, salary, tags, remote, seniority, techStack...
+```
+
+**7. SSE events stream về browser realtime:**
+
+| Event | Khi nào | Dữ liệu |
+|-------|---------|---------|
+| `start` | Đầu scrape | sources[], keyword_count |
+| `source_start` | Bắt đầu 1 source | source name |
+| `job` | Tìm thấy job mới | id, title, company, source, salary, remote, tags |
+| `source_done` | Xong 1 source | source, count, blocked |
+| `source_error` | Source bị lỗi | source, error message |
+| `blocked` | Cuối scrape | tổng số job bị block |
+| `scrape_done` | Toàn bộ xong | total, new_count, blocked |
+| `stopped` | User bấm dừng | code: -15 (SIGTERM) |
+
+**8. Sau khi xong:** ghi backup JSON ra `~/job-digests/jobs_raw_<templateId>.json` trên Render server.
 
 ---
 
-## Luồng 4: Billing
+## Luồng 2: View Jobs — AI Recommended Jobs
+
+Hiện toàn bộ job đã scrape, có hoặc chưa có điểm AI.
 
 ```
-User trả tiền qua Paddle (quốc tế) hoặc VNPay/MoMo (Việt Nam)
-  ↓
-Provider gửi webhook đến:
-  /api/billing/webhook-mor  ← Paddle/LemonSqueezy
-  /api/billing/webhook-vn   ← VNPay/MoMo
-  ↓
-Verify chữ ký HMAC (chống giả mạo)
-  ↓
-Upsert Subscription trong MongoDB
-  ↓
-addCredits() → nạp credit vào ví
-  ↓
-Workspace.plan = "personal" hoặc "team"
-  ↓
-Từ lần sau gọi getEntitlements() → trả kết quả mới
+User vào trang Jobs
+  ↓ GET /api/jobs → load job cards của workspace
+  ↓ Nếu còn job chưa analyzed → user bấm "Analyze"
+      GET /api/analyze/[templateId] (SSE stream)
+      ↓ Lấy batch 20 jobs chưa analyzed
+      ↓ arkChat(): system = profile user, user message = danh sách job JSON
+      ↓ AI trả về [{jobId, matchPct, action, track, moat, whyYou, redFlags}]
+      ↓ Bulk update MongoDB → stream kết quả về browser
+      ↓ Lặp batch tiếp theo đến hết
+  Cards xuất hiện dần với matchPct %
+
+User click 1 card → mở Side Panel BASIC
+  ↓ Hiện: title, company, mô tả, skills match, link apply
+  ↓ Bấm "Deep Analysis" → mở Side Panel DEEP
+      POST /api/jobs/[id]/deep-analyze
+      ↓ arkChat() phân tích sâu: công ty, thị trường, xác suất hire
+      ↓ Stream kết quả vào panel
+
+User bấm "Choose" trên card → job được đánh dấu chosen: true → xuất hiện ở View 3 (Tracker)
+User bấm "Skip" → notInterested: true → ẩn khỏi grid
 ```
 
-**Tại sao dùng MoR (Merchant of Record)?** Stripe không hỗ trợ ngân hàng Việt Nam trực tiếp. Paddle/LemonSqueezy là "người bán hàng" thay mình, tự xử lý VAT/thuế toàn cầu và chuyển tiền về tài khoản VN. Phí ~5%.
+**Free tier gate:** workspace đã score ≥ 10 jobs → các job tiếp theo bị đánh `meta.gated: true`, không gọi AI. Card vẫn hiện info nhưng không có matchPct — hiện badge "🔒 upgrade to score".
 
 ---
 
-## AI Gateway — cách ARK rotation hoạt động
+## Luồng 3: View Tracker — User Selected Jobs
 
-**Vấn đề:** mỗi model ARK có quota free tháng. Nếu 1 model hết → các model khác vẫn còn.
+Chỉ chứa job user đã bấm "Choose". Tách hoàn toàn khỏi Jobs grid.
 
 ```
-arkChat() được gọi
-  ↓ Random chọn 1 trong 8 models làm điểm bắt đầu
-  ↓ Thử gọi model đó
-  ↓ Nếu 429 (quota hết) → thử model tiếp theo
-  ↓ Nếu tất cả hết → throw error + CẦN ALERT ngay
-  ↓ Nếu thành công → ghi Usage document (token, cost, latency)
+User vào trang Tracker
+  ↓ GET /api/jobs?chosen=true → load các job đã choose
+  ↓ Hiện dạng board theo pipeline status:
+      tracking → applied → screening → interview → offer / rejected
+
+User kéo card sang cột khác → PATCH /api/jobs/[id] { status: "applied" }
+
+User bấm "Cover Letter" trên 1 job
+  ↓ POST /api/jobs/[id]/cover-letter
+  ↓ arkChat(): context = job JD + user profile + moat từ deep analysis
+  ↓ Stream cover letter về panel
+
+User bấm "Deep Analysis" trên Tracker
+  ↓ Mở Side Panel DEEP (cùng component với View 2)
+  ↓ Nếu đã deep analyze trước đó → load từ DB (meta.deepAnalysis), không gọi AI lại
+  ↓ Nếu chưa → gọi /api/jobs/[id]/deep-analyze → stream kết quả
 ```
 
-8 models (từ rẻ đến đắt): `seed-2-0-lite` ($0.1/1M), `deepseek-v4-flash` ($0.1/1M), `seed-1-8` ($0.1/1M), `glm-4-7` ($0.3/1M), `deepseek-v3-2` ($0.3/1M), `seed-2-0-mini` ($0.3/1M), `seed-2-0-pro` ($0.7/1M), `deepseek-v4-pro` ($0.7/1M).
+---
 
-**Freemium pool:** mỗi tài khoản ARK có 500k token free × 8 model = 4M token/tháng. 1 free user tiêu ~45k token. Nghĩa là 1 tài khoản phục vụ ~89 free user/tháng.
+## Luồng 4: View Share — Chia sẻ bộ job (Team plan)
 
-| Số tài khoản ARK | Free user phục vụ được |
-|-----------------|----------------------|
-| 1 | ~89 |
-| 5 | ~445 |
-| 10 | ~890 |
+```
+User chọn nhiều job → bấm "Share"
+  ↓ POST /api/share → tạo Share document { token, jobIds[], expiresAt: +7 ngày }
+  ↓ Trả về link: /share/[token]
 
-⚠️ **Cần xác nhận ToS ARK:** rotate đa tài khoản có thể vi phạm điều khoản. Paid user dùng quota riêng, không dùng pool free.
+Người nhận mở link
+  ↓ GET /api/share/[token] → verify token còn hạn
+  ↓ Hiện preview các job cards (không cần đăng nhập)
+  ↓ Bấm "Claim" → POST /api/share/[token]/claim
+      Copy jobs vào account người nhận (analyzed: true, không tốn token)
+      hasClaimed: true → hiện badge đã nhận
+```
+
+**Gate:** chỉ Team plan mới tạo được share link. Free/Personal → 402.
 
 ---
 
@@ -191,27 +282,6 @@ try {
 ```
 
 `getEntitlements()` query 3 thứ: `Workspace` (plan type), `Subscription` (còn hạn không), `CreditWallet` (số dư). Trả về object `TierLimits` với các boolean `canDeepAnalysis`, `canCoverLetter`, `canTracker`...
-
----
-
-## Agent Core — kế hoạch tách repo
-
-**Hiện tại:** agent nằm trong `lib/agent/` của jobradar repo.
-
-**Kế hoạch (post-MVP):** tách thành repo riêng `agent-core` vì muốn build nhiều app dùng chung AI layer:
-
-```
-agent-core (repo riêng)
-  ├── LLM gateway (ARK rotation, metering)
-  ├── Agent runtime (ReAct loop)
-  ├── Memory store (AgentMemory, KeywordMemory)
-  └── MCP server endpoint
-
-jobradar ──────────────────────────────── gọi agent-core qua HTTP/SDK
-app-2 (tool khác) ─────────────────────── cũng gọi agent-core
-```
-
-**Khi nào tách:** contract API ổn định. Hiện tại giữ trong `lib/agent/` với ranh giới rõ ràng (lib/agent không import ngược lại app/).
 
 ---
 

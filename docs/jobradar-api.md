@@ -122,17 +122,6 @@ Bulk update nhiều jobs.
 
 ---
 
-## Templates
-
-### GET /api/templates
-Lấy tất cả template của user.
-
-### POST /api/templates
-Tạo template mới.
-
-### GET/PATCH/DELETE /api/templates/[id]
-CRUD.
-
 ### POST /api/templates/[id]/feedback
 Chat feedback để tinh chỉnh template (lọc job, thêm keyword, hardNO).
 
@@ -178,13 +167,70 @@ Chấm điểm jobs chưa analyzed. Tự dừng nếu Free tier vượt 10 job.
 
 ---
 
-## Chat
+## Chat / Onboarding (View 1 — Chat First)
 
 ### POST /api/chat *(SSE)*
-Radar agent — onboarding + job queries.
+Xử lý prompt của user. Khi chưa có template → extract profile + sinh keywords → trả về data để hiện CV Modal. Khi đã có template → trả lời query thông thường.
 
-**Body:** `{ message, history: [{role,content}][], templateId? }`  
-**Events:** `data: { text }` (word by word), `data: [DONE]`, `data: { error }`
+**Body:** `{ message, history: [{role,content}][], templateId? }`
+
+**Khi chưa có template (onboarding flow):**
+
+| Event | Dữ liệu |
+|-------|---------|
+| `extracting` | `{}` — đang phân tích prompt |
+| `extracted` | `{ role, skills, experience, minSalaryUsdHr, mustBeRemote, hardNO, languages }` — kết quả extract để điền vào CV Modal |
+| `keywords_ready` | `{ keywords[], platformKeywords{} }` — keywords đã sinh |
+| `cv_modal` | `{}` — signal frontend mở CV Modal |
+| `done` | `{}` |
+| `error` | `{ message }` |
+
+**Khi đã có template (normal mode):**
+
+| Event | Dữ liệu |
+|-------|---------|
+| `data` | `{ text }` — stream từng chữ (lặp lại cho đến khi xong) |
+| `data` | `[DONE]` — kết thúc thành công, không có event nào sau |
+| `error` | `{ message }` — thất bại, thay thế cho `[DONE]`, không bao giờ cùng lúc |
+
+---
+
+### POST /api/templates
+Tạo template mới. Gọi sau khi user bấm OK trong CV Modal.
+
+**Body:**
+```json
+{
+  "promptText": "...",
+  "requirementText": "...",
+  "tracks": [],
+  "skills": [],
+  "experience": "mid",
+  "jobTypes": ["freelance", "full_time"],
+  "locationTypes": ["remote", "hybrid"],
+  "minSalaryUsdHr": 35,
+  "mustBeRemote": true,
+  "hardNO": [],
+  "languages": [],
+  "generatedKeywords": [],
+  "platformKeywords": {},
+  "autoScrape": true
+}
+```
+
+**Response:** `{ templateId, runId? }` — `runId` có khi `autoScrape: true`, dùng để subscribe SSE scrape stream ngay sau đó.
+
+### GET /api/templates
+Lấy tất cả template của user.
+
+### GET /api/templates/[id]
+Chi tiết 1 template.
+
+### PATCH /api/templates/[id]
+Cập nhật template (từ CV Modal lần sau hoặc settings).
+
+### DELETE /api/templates/[id]
+Xóa template.
 
 ---
 

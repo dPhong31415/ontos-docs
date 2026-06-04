@@ -86,6 +86,56 @@ Hiện tại chưa có paywall thật (M3 đã build webhook nhưng chưa connec
 
 ---
 
+## Cấu trúc UI (đã chốt)
+
+5 trang/view cố định. Không còn layout split chat-jobs nữa.
+
+```
+┌──────────────────────────────────────────────────────────────┐
+│  1. Chat First                                               │
+│     Entry point duy nhất khi mới vào app                    │
+│     • AI hỏi profile → analyze prompt → generate keywords   │
+│     • CV Modal (overlay): role / exp / lương / keyword       │
+│     → Sau khi có template → chuyển sang trang Jobs           │
+└──────────────────────────────────────────────────────────────┘
+                            ↓
+┌──────────────────────────────────────────────────────────────┐
+│  2. Jobs — AI Recommended Jobs                               │
+│     Grid card toàn bộ job đã scrape + scored                │
+│     • Mỗi card: scoring (matchPct %) + mô tả ngắn           │
+│     • Click card → mở Side Panel BASIC (info cơ bản)        │
+│     • Từ Basic → bấm "Deep" → mở Side Panel DEEP ANALYSIS   │
+│     • Bấm "Choose" → job sang Tracker                       │
+└──────────────────────────────────────────────────────────────┘
+                            ↓ choose
+┌──────────────────────────────────────────────────────────────┐
+│  3. Tracker — User Selected Jobs                             │
+│     Chỉ chứa job user đã chọn (choose)                      │
+│     • Status tracking: tracking → applied → screening →     │
+│       interview → offer / rejected                           │
+│     • Cover letter / proposal generation                     │
+│     • Mở Side Panel DEEP ANALYSIS (dùng chung với Jobs)     │
+└──────────────────────────────────────────────────────────────┘
+
+┌────────────────────────┐   ┌────────────────────────┐
+│  4. Admin              │   │  5. Share               │
+│     Quản lý workspace, │   │     Team chia sẻ bộ job │
+│     usage, billing     │   │     cho người khác claim │
+└────────────────────────┘   └────────────────────────┘
+```
+
+**Side Panels (dùng chung giữa Jobs và Tracker):**
+
+| Panel | Mở từ | Nội dung |
+|-------|--------|---------|
+| **Basic Info** | Click card trên Jobs | Thông tin job cơ bản, link apply, skills match |
+| **Deep Analysis** | Từ Basic (Jobs) hoặc từ Tracker | Phân tích sâu: công ty, thị trường, xác suất hire, cover letter |
+
+**CV Modal** (overlay xuất hiện từ Chat First):
+Gồm 4 trường: role, kinh nghiệm (exp), lương mong muốn, keyword. Dùng để tạo hoặc chỉnh sửa template tìm việc của user.
+
+---
+
 ## Cấu trúc repo
 
 ```
@@ -111,7 +161,9 @@ jobradar-docs/          ← repo tài liệu (repo này)
 - ✅ Legal pages: /terms /privacy /refunds
 
 **Đang làm (frontend):**
-- 🔄 Chat-first layout: Radar chat bên trái, job cards bên phải
+- 🔄 View 1 — Chat First: trang chat standalone, CV modal
+- 🔄 View 2 — Jobs: grid card + Side Panel Basic + Side Panel Deep
+- 🔄 View 3 — Tracker: status board + cover letter + Side Panel Deep
 - 🔄 Upgrade modal khi nhận 402
 
 **Chưa làm:**

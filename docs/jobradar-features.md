@@ -14,24 +14,42 @@ sidebar_position: 2
 
 ---
 
+> **Mapping tính năng → View UI:**
+> - View 1 (Chat First): tính năng 1, 2
+> - View 2 (Jobs): tính năng 3, 4, 5, 6
+> - View 3 (Tracker): tính năng 7, 8
+> - View 5 (Share): tính năng 9
+> - Không gắn view cụ thể: tính năng 10, 11, 12
+>
+> Xem cấu trúc chi tiết tại [Tổng quan — Cấu trúc UI](/jobradar-overview#cấu-trúc-ui-đã-chốt)
+
+---
+
 ## MVP — Phải có trước khi charge tiền
 
 ### 1. Chat Onboarding (tạo hồ sơ tìm việc)
+> **View 1 — Chat First**
 
-**Mục đích:** User mới vào app chưa có gì. Chat là điểm vào duy nhất — agent hỏi từng câu, cuối cùng tạo ra "CV template" để app biết cần tìm job gì cho user này.
+**Mục đích:** User mới vào app chưa có gì. Thấy khung input + các thẻ gợi ý tĩnh bên dưới. Không có vòng hỏi-đáp với AI — user tự gõ prompt một lần, AI extract và tạo template.
+
+**Thẻ gợi ý tĩnh** (hiện cố định bên dưới khung input, không do AI sinh):
+- Chuyên môn của bạn là gì?
+- Kinh nghiệm nghề nghiệp của bạn?
+- Mức lương mong muốn?
+- Loại hình làm việc (remote / hybrid / onsite)?
+- Kỹ năng nổi bật của bạn?
 
 **Luồng:**
-1. User mở app lần đầu → thấy chat (không thấy grid job)
-2. Radar agent hỏi theo thứ tự:
-   - "Bạn đang tìm loại công việc gì?" → role/track
-   - "Kỹ năng chính của bạn?" → skills
-   - "Mấy năm kinh nghiệm?" → experience level
-   - "Lương mong muốn?" → minSalaryUsdHr
-   - "Chỉ remote hay ok hybrid/onsite?" → mustBeRemote
-   - "Làm việc bằng ngôn ngữ nào?" → languages
-   - "Ngành/công ty không muốn?" → hardNO
-3. Agent gọi tool `create_template` → tạo `JobTemplate` trong DB
-4. Hiện thông báo "Hồ sơ tạo xong → tiếp theo: sinh keywords"
+1. User mở app lần đầu → thấy trang Chat First (không thấy Jobs page)
+2. User đọc thẻ gợi ý → tự gõ prompt mô tả bản thân → submit
+3. AI extract: role, skills, exp, lương, preference từ prompt
+4. Gọi tool `generate_keywords` → sinh keywords cho từng source
+5. Hiện **CV Modal (popup)** — điền sẵn toàn bộ thông tin AI đã extract: role, exp, skills, lương, keywords. User xem lại và chỉnh tay nếu cần
+6. User bấm **"OK"** → gọi tool `create_template` → lưu `JobTemplate` vào DB với data đã chỉnh
+7. Trigger scrape → chạy nền
+8. Khi xong → chuyển sang View 2 (Jobs)
+
+**CV Modal là bước bắt buộc** — scrape không chạy cho đến khi user xác nhận OK. Cho phép sửa thủ công toàn bộ các trường trước khi commit.
 
 **File liên quan:** `lib/agent/graph.ts`, `lib/agent/tools.ts` (tool `create_template`), `app/api/chat/route.ts`
 
@@ -81,11 +99,20 @@ sidebar_position: 2
 4. Mỗi job: hash MD5 → check `SeenJob` → nếu mới → ghi vào `jobs` collection
 5. Stream progress về browser realtime
 
-**Gate:** Free được scrape nhiều, nhưng AI chỉ chấm 10 job đầu.
+**Loading screen khi scrape đang chạy:**
+- Hiện các thanh loading (progress bar) theo từng source đang được scrape — mỗi source 1 thanh, cập nhật realtime qua SSE
+- Nhân vật 8-bit hoạt hình chạy/nhảy trên màn hình trong lúc chờ — vui nhộn, không tẻ nhạt
+- Hiện số job đã tìm thấy tăng dần theo thời gian thực
+- Khi cold start (~50s delay): nhân vật 8-bit ở trạng thái "đang thức dậy" thay vì màn hình trắng đứng im
+- **Nút "Dừng"** luôn hiện trong suốt quá trình — bấm để dừng giữa chừng, jobs đã tìm được trước đó vẫn được giữ lại
+
+**Gate:** Scraper kéo **toàn bộ job** khớp với keywords từ tất cả sources đã chọn — không giới hạn số lượng. Tuy nhiên bước AI chấm điểm (Analyze) chỉ chạy cho **10 job đầu tiên** của mỗi workspace (Free tier). Job thứ 11 trở đi vẫn được lưu vào DB và hiện trên UI, nhưng sẽ bị đánh `meta.gated: true` và không có `matchPct`.
 
 **File liên quan:** `runner/server.py`, `scripts/scripts/job_scraper.py`, `app/api/scrape/trigger/route.ts`
 
-**Trạng thái:** ✅ Xong. ⬜ Cần monitor khi Render cold start (~50s delay).
+**Trạng thái:** ✅ Xong. ⬜ Cần monitor khi Render cold start.
+
+> **Render cold start:** Render free tier tắt worker sau 15 phút không có request. Lần gọi đầu tiên sau khi worker ngủ sẽ mất khoảng **50 giây** để boot lại trước khi scrape bắt đầu thực sự chạy. Trong thời gian này UI vẫn đang ở trạng thái "Connecting…" — không phải lỗi. Cần monitor để phân biệt cold start bình thường với worker thực sự bị crash.
 
 ---
 
@@ -204,7 +231,18 @@ sidebar_position: 2
 
 **File liên quan:** `app/(app)/tracker/page.tsx`, `app/api/jobs/[id]/tasks/route.ts`
 
-**Trạng thái:** ✅ Xong. ⬜ UI giao task cho teammate chưa có.
+**Trạng thái:** ✅ Xong.
+
+**Còn thiếu — UI giao task cho teammate:**
+
+Hiện tại mỗi task trong tracker chỉ thuộc về 1 workspace member duy nhất (người tạo). Chưa có cơ chế assign task sang người khác trong cùng Team plan.
+
+Cần làm:
+- Thêm field `assigneeId` (hoặc `assignedTo`) vào task schema, ref đến `userId` của member trong workspace
+- UI: dropdown chọn assignee khi tạo/sửa task — chỉ hiện danh sách member đang có trong workspace
+- Hiển thị avatar/tên assignee trên task card
+- Filter task theo assignee (xem "task của tôi" vs "task của cả team")
+- Notification khi bị assign task (tùy — có thể để sau)
 
 ---
 
