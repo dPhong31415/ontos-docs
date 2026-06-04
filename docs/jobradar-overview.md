@@ -1,38 +1,60 @@
 ---
 id: jobradar-overview
-title: jobradar — Overview
-sidebar_label: Overview
+title: Tổng quan
+sidebar_label: 🗺 Tổng quan
 sidebar_position: 1
 ---
 
-# jobradar
+# jobradar — Tổng quan
 
-AI-powered job intelligence SaaS. Multi-tenant, chat-first, agentic.
+SaaS tìm việc thông minh bằng AI. Multi-tenant, chat-first, agentic, tự cải thiện.
 
-**Live:** [jobradar.vercel.app](https://jobradar.vercel.app)  
-**Stack:** Next.js 16, MongoDB Atlas, BytePlus ARK (LLM), Clerk (auth), Render (scraper worker)
-
----
-
-## What it does
-
-1. User describes what they're looking for in a **single chat** → agent builds a job search profile (template)
-2. Agent generates **platform-optimized keywords** (per source: LinkedIn, RemoteOK, Himalayas, Indeed, Reddit…)
-3. Scraper worker pulls live jobs → Claude **AI-scores each job** (match %, action recommendation, skill gaps)
-4. User sees **recommendation cards** (grid or list) with Skip / Choose actions
-5. Chosen jobs go to **Project Tracker** with per-job task breakdown + status pipeline
-6. **Self-improving**: every skip/apply/feedback updates `AgentMemory` + `KeywordMemory` → next run is smarter
+**Production:** jobradar-orcin.vercel.app  
+**Stack:** Next.js 16 · MongoDB Atlas · BytePlus ARK · Clerk · Render
 
 ---
 
-## Monetization model
+## Luồng chính
 
-| Tier | Price | What's included |
-|------|-------|-----------------|
-| **Free** | $0 | 1 template, 3 keyword regens, AI score for first 10 jobs, basic market research |
-| **Personal** | ~$9–12/mo | Unlimited scoring, deep analysis, cover letter/proposal, source presets, project tracker |
-| **Team** | ~$29–49/mo/seat | Personal + share links, job assignment |
+```
+User mô tả qua chat
+  → Agent onboarding → tạo JobTemplate (role, skills, lương, remote...)
+  → AI sinh keywords tối ưu cho từng nền tảng
+  → Scraper worker kéo job → AI chấm điểm (matchPct, action)
+  → Cards gợi ý → Skip / Choose
+  → Tracker → task breakdown, cover letter, status pipeline
+  → Mỗi feedback → AgentMemory cập nhật → lần sau chính xác hơn
+```
 
-**Plus:** credit packs for à-la-carte deep analysis / cover letters (`1 credit = $0.01`).
+---
 
-Payments: **Paddle/LemonSqueezy** (international, MoR) + **VNPay/MoMo** (Vietnam domestic).
+## Tier & giá
+
+| Tier | Giá | Tính năng |
+|------|-----|-----------|
+| **Free** | $0 | 1 template, regen 3 lần, AI chấm 10 job, research cơ bản |
+| **Personal** | ~$9–12/tháng | Không giới hạn chấm, deep analysis (2 credit), cover letter (1 credit), presets, tracker |
+| **Team** | ~$29–49/tháng/người | + share link, giao job cho thành viên |
+
+**Credit:** 1 credit = $0.01. Mua lẻ hoặc theo gói.
+
+---
+
+## Repos
+
+| Repo | Mô tả |
+|------|-------|
+| `dPhong31415/jobradar` | App chính (Next.js + API + Agent) |
+| `dPhong31415/jobradar-docs` | Tài liệu (repo này) |
+
+---
+
+## Phân công dev
+
+| Dev | Zone |
+|-----|------|
+| **Dev A — Frontend** | `app/(app)/**`, `components/` |
+| **Dev B — Backend** | `app/api/**`, `lib/models/**`, `lib/*.ts`, `scripts/` |
+| **Shared (phải hẹn)** | `proxy.ts`, `lib/sources.ts`, `lib/entitlements.ts`, `package.json` |
+
+→ Chi tiết xem [Colab Workflow](/jobradar-colab)
