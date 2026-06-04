@@ -11,6 +11,18 @@ sidebar_position: 7
 
 ---
 
+## 🐛 Known Bugs (cần fix trước launch)
+
+| # | Bug | Mô tả | File | Priority |
+|---|-----|-------|------|----------|
+| 1 | **Chat trắng sau 2 bước** | Onboarding: user submit prompt → chạy được "extracting" + "extracted" → sau đó UI reset về chat trắng, không hiện CV Modal. Root cause: `generateKeywords()` (step 2) throw error → event `"error"` → `setStage("idle")` nhưng UI không hiện `statusMsg` khi `stage === "idle"` → user thấy màn hình trắng không rõ lý do. | `app/onboarding/page.tsx:93-96`, `app/api/chat/extract/route.ts` | 🔴 P0 — block onboarding |
+
+**Fix cần làm (Dev A + Dev B phối hợp):**
+- Dev A: khi `stage === "idle"` + `statusMsg` chứa "Lỗi" → hiện error toast/message thay vì màn trắng
+- Dev B: log lỗi `generateKeywords` rõ hơn trong SSE, kiểm tra `AgentMemory.findOne` có fail không khi workspace mới tạo
+
+---
+
 ## Tổng quan tiến độ
 
 ```
@@ -18,7 +30,7 @@ M0 Lõi kỹ thuật  ██████████ ✅ Xong
 M1 Multi-tenant  ██████████ ✅ Xong (cần chạy migration)
 M2 Entitlements  ██████████ ✅ Xong
 M3 Billing       ████████░░ 🔄 90% — cần connect provider thật
-M4 Chat-first UX ███████░░░ 🔄 70% — layout xong, còn upgrade modal + landing
+M4 Chat-first UX ████████░░ 🔄 80% — onboarding page live, bug P0 chat trắng cần fix
 M5 Team + Admin  ████░░░░░░ 🔄 40% — backend xong, frontend còn thiếu
 ```
 
