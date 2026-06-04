@@ -272,6 +272,34 @@ File: `lib/models/Share.ts` · Collection: `shares`
 
 ---
 
+## Asset & Purchase *(post-MVP — marketplace)*
+
+File: `lib/models/Asset.ts` (chưa tạo) · Collections: `assets`, `purchases`
+
+**Asset** — mẫu CV/cover-letter bán lẻ:
+
+| Field | Type | Mô tả |
+|-------|------|-------|
+| `name` | String | Tên template (vd "Modern Creative CV") |
+| `type` | `"cv"` / `"cover_letter"` | Loại |
+| `previewUrl` | String | Ảnh preview |
+| `priceUsd` | Number | Giá bán ($) |
+| `createdBy` | ObjectId → User | Tác giả |
+| `isActive` | Boolean | Đang bán |
+
+**Purchase** — lịch sử mua:
+
+| Field | Type | Mô tả |
+|-------|------|-------|
+| `workspaceId` | ObjectId | |
+| `assetId` | ObjectId → Asset | |
+| `provider` | String | `"paddle"`, `"momo"`... |
+| `externalId` | String | ID order của provider |
+| `paidUsd` | Number | Giá đã trả |
+| `createdAt` | Date | |
+
+---
+
 ## AgentMemory
 
 File: `lib/models/AgentMemory.ts` · Collection: `agentmemories`

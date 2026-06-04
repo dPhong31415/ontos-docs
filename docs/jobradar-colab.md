@@ -139,9 +139,30 @@ git push --force-with-lease
 
 ---
 
-## Dùng Claude Code làm việc
+## Dùng Claude Code như dev team
 
-Claude Code đọc `.claude/CLAUDE.md` tự động mỗi session.
+Claude Code đọc `.claude/CLAUDE.md` tự động mỗi session. **Subagents theo role** để phân công như team thật:
+
+| Subagent | Dùng khi | Tools |
+|---------|----------|-------|
+| `frontend-engineer` | Sửa UI, components, pages | Read/Edit/Write/Bash(build) |
+| `backend-engineer` | API routes, models, entitlements | Read/Edit/Write/Bash |
+| `devops` | Vercel, Render, env, deploy, Mongo indexes | Read/Edit/Bash |
+| `qa-test` | Viết/chạy tests, reproduce bug | Read/Bash(tests) |
+| `reviewer` | `/code-review` trước merge | Read-only |
+
+**Vòng lặp SOTA (plan mode):**
+```
+1. /plan — thiết kế trước khi code (cho feature > 2 file)
+2. Subagent implement trên branch feat/*
+3. /code-review — review trước merge
+4. qa-test chạy test cases
+5. PR → merge main
+```
+
+**Skills có sẵn (gõ /tên):**
+- `/deploy` — gate → build → push 1 lần (tránh lố quota)
+- `/code-review` — review diff, có thể dùng `ultra` cho thay đổi lớn
 
 **Khi giao task cho Claude:**
 ```

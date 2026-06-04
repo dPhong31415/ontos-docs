@@ -7,7 +7,32 @@ sidebar_position: 2
 
 # System Design
 
-## Kiến trúc tổng thể
+## Kiến trúc mục tiêu — Agent Core tách repo riêng
+
+Mục tiêu dài hạn: build nhiều app. **Agent Framework là tài sản lõi, repo riêng, tái sử dụng cho mọi app.**
+
+```
+[ agent-core ]  ← REPO RIÊNG (chưa tách, đang nằm trong lib/agent/)
+  • LLM Gateway: ARK rotation (pool free + pool paid), retry, metering
+  • Usage metering → billing event theo (appId, workspaceId, feature)
+  • Agent runtime: ReAct loop + tools + memory
+  • Memory store: AgentMemory / KeywordMemory (per app, per tenant)
+  • MCP server: expose tools cho agent/partner bên thứ 3
+  • SDK TypeScript mỏng để app gọi qua HTTP
+          ▲
+          │ HTTP / SDK (đa tenant: appId + workspaceId)
+          │
+[ jobradar (Next.js) ]  ← REPO APP hiện tại → Vercel
+[ app #2, #3... ]       ← chỉ cần port Next.js, dùng chung agent-core
+
+[ scraper-worker ]      ← Render Docker, chỉ scrape, ghi Mongo trực tiếp
+```
+
+**Khi nào tách:** contract API/SDK agent-core ổn định → extract thành package npm hoặc HTTP service riêng. Hiện tại giữ trong `lib/agent/` với ranh giới rõ ràng (không import ngược).
+
+---
+
+## Kiến trúc tổng thể (hiện tại)
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
@@ -194,3 +219,63 @@ Vòng lặp:
   → keyword-gen lần sau inject memory vào prompt
   → kết quả relevance tăng dần
 ```
+
+---
+
+## Freemium pool rotate tài khoản free
+
+Mỗi tài khoản ARK có **500.000 token free/model × 8 model ≈ 4.000.000 token/tháng**.  
+1 free user tiêu ~45.000 token (chủ yếu lúc onboarding, sau đó chạm cap).
+
+| Số tài khoản ARK free | Free user phục vụ được/tháng |
+|----------------------|------------------------------|
+| 1 | ~89 |
+| 5 | ~445 |
+| 10 | ~890 |
+| 20 | ~1.780 |
+
+Công thức: `users ≈ (4.000.000 × số_tài_khoản) / 45.000`
+
+**⚠ Rủi ro:**
+- Rotate đa tài khoản có thể **vi phạm ToS ARK** → cần xác nhận điều khoản
+- Dễ bị ban theo IP → cần email + IP ổn định
+- **Paid tier TUYỆT ĐỐI không dùng pool free** — paid dùng quota riêng trả phí
+- Pool free cạn → chặn mềm + mời upgrade
+
+---
+
+## Định giá không lỗ
+
+**Nguyên tắc:** `giá_gói ≥ token_cost × markup + phần phân bổ hạ tầng`
+
+Token rẻ → **floor là hạ tầng**, credit/overage bảo vệ biên với user nặng.
+
+**Chi phí hạ tầng ước tính:**
+- Vercel Pro: ~$20/tháng
+- Render worker: $7–20/tháng
+- MongoDB Atlas: M0 free → M10 $57 khi scale
+- **Cộng lại:** ~$30–100/tháng shared across toàn bộ user
+
+**Token cost thực tế (ARK):**
+
+| Tính năng | Token in | Token out | Cost/lần (ước tính) |
+|-----------|----------|-----------|---------------------|
+| Keyword gen | ~5k | ~2k | ~$0.0033 |
+| Analyze 20 jobs | ~8k | ~2.5k | ~$0.0047 |
+| Deep analysis 1 job | ~6k | ~2k | ~$0.0084 |
+| Cover letter | ~4k | ~1.5k | ~$0.0026 |
+| Chat 1 tin | ~3k | ~1k | ~$0.0018 |
+
+**User nặng/tháng** (200 analyze + 20 deep + 20 cover + 100 chat) ≈ **~$0.45/tháng token**.
+
+**Markup credit:** `1 credit = $0.01 bán ra` với markup 4–6×:
+- Deep analysis: cost ~$0.008 → bán **2 credit ($0.02)** = 2.5× markup
+- Cover letter: cost ~$0.003 → bán **1 credit ($0.01)** = 3× markup
+
+**Giá gói:**
+- **Personal** ~$9–12/tháng → COGS ~5–25% → biên >75%
+- **Team** ~$29–49/tháng/seat
+- **Credit pack**: 100 credit = $4–5 (à la carte)
+- **Asset packs**: mẫu CV/cover-letter bán lẻ 1 lần
+
+⚠ **Số chính xác phải chốt lại sau khi đọc `GET /api/admin/cost-report`** với dữ liệu Usage thật.
