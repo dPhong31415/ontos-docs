@@ -99,7 +99,22 @@ git push origin feat/A-mô-tả-ngắn
 # → Test trên URL đó, KHÔNG đụng production
 ```
 
-**Bước 4:** Mở Pull Request → người kia review → merge vào main → production tự deploy
+**Bước 4:** Mở Pull Request trên GitHub
+
+```bash
+# Claude tự mở PR nếu bạn yêu cầu:
+# "Mở PR cho branch này"
+# Hoặc tự làm:
+gh pr create --title "feat: chat-first layout" --body "Mô tả..."
+```
+
+Sau khi PR mở:
+- GitHub gửi email thông báo cho bạn
+- Vercel comment trực tiếp vào PR với Preview URL để test
+- Bạn (hoặc Dev kia) vào GitHub, xem tab **Files changed** → review diff
+- Nếu OK → bấm **"Merge pull request"** → main tự deploy production
+
+**Bạn có cần vào GitHub không?** — **Có**, trước khi merge. Claude không tự merge được (branch protection chặn). Bạn là checkpoint cuối cùng.
 
 ### Quy tắc bắt buộc
 
@@ -117,6 +132,52 @@ git add <file đã fix>
 git rebase --continue
 git push --force-with-lease
 ```
+
+---
+
+## Vòng đời một feature — Claude làm, bạn approve
+
+Ví dụ thực tế: Dev A (Claude) build "Upgrade modal khi nhận 402".
+
+```
+Bạn giao việc cho Claude:
+"Build upgrade modal — khi route trả 402 {upgradeTo:'personal'},
+hiện modal đẹp giải thích tính năng cần upgrade. Zone Dev A."
+          ↓
+Claude làm trên branch feat/A-upgrade-modal:
+  - Đọc CLAUDE.md + team.md
+  - Viết code trong components/ và app/(app)/dashboard/
+  - Chạy tsc --noEmit + test:unit
+  - Commit + push
+          ↓
+Vercel tự build Preview URL (bạn nhận email hoặc xem Vercel dashboard)
+  → Bạn mở Preview URL, test thử feature
+          ↓
+Claude mở PR (nếu bạn yêu cầu "mở PR đi"):
+  → GitHub gửi email cho bạn
+  → Vercel comment URL preview vào PR
+          ↓
+BẠN vào GitHub → tab "Files changed" → xem diff
+  Câu hỏi cần check:
+  □ Code có đúng zone (chỉ frontend files)?
+  □ Logic có đúng spec không?
+  □ Có gì lạ không?
+          ↓
+Nếu OK → bấm "Merge pull request" trên GitHub
+          ↓
+main tự deploy production trong ~1 phút
+```
+
+**Bạn phải làm gì thủ công:**
+1. ✅ Test trên Preview URL (tùy — có thể skip nếu tin tưởng)
+2. ✅ Review diff trên GitHub (quan trọng)
+3. ✅ Bấm Merge (bắt buộc — không delegate cho Claude)
+
+**Claude tự làm:**
+- Code, commit, push
+- Mở PR nếu bạn nói "mở PR"
+- Fix lỗi nếu bạn comment trên PR "fix cái này"
+- Không tự merge vào main
 
 ---
 
