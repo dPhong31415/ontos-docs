@@ -3,11 +3,11 @@ import type { Config } from "@docusaurus/types";
 import type * as Preset from "@docusaurus/preset-classic";
 
 const config: Config = {
-  title: "jobradar docs",
-  tagline: "AI-powered job intelligence — architecture, API, ops",
+  title: "Ontos",
+  tagline: "Ontology platform — một Elixir core, nhiều app",
   favicon: "img/favicon.ico",
   future: { v4: true },
-  url: "https://jobradar-docs.vercel.app",
+  url: "https://ontos-docs.vercel.app",
   baseUrl: "/",
   onBrokenLinks: "throw",
   onBrokenMarkdownLinks: "warn",
@@ -17,7 +17,7 @@ const config: Config = {
       docs: {
         sidebarPath: "./sidebars.ts",
         routeBasePath: "/",
-        editUrl: "https://github.com/dPhong31415/jobradar/edit/main/",
+        editUrl: "https://github.com/dPhong31415/ontos-docs/edit/main/",
       },
       blog: false,
       theme: { customCss: "./src/css/custom.css" },
@@ -26,20 +26,20 @@ const config: Config = {
   themeConfig: {
     colorMode: { defaultMode: "dark", respectPrefersColorScheme: false },
     navbar: {
-      title: "jobradar docs",
+      title: "Ontos",
       items: [
         { type: "docSidebar", sidebarId: "docs", position: "left", label: "Docs" },
-        { href: "https://jobradar.vercel.app", label: "Live app", position: "right" },
-        { href: "https://github.com/dPhong31415/jobradar", label: "GitHub", position: "right" },
+        { href: "https://jobradar.vercel.app", label: "jobradar (app)", position: "right" },
+        { href: "https://github.com/dPhong31415/ontos-docs", label: "GitHub", position: "right" },
       ],
     },
     footer: {
       style: "dark",
       links: [
-        { title: "App", items: [{ label: "jobradar", href: "https://jobradar.vercel.app" }] },
-        { title: "Source", items: [{ label: "GitHub", href: "https://github.com/dPhong31415/jobradar" }] },
+        { title: "Apps", items: [{ label: "jobradar", href: "https://jobradar.vercel.app" }] },
+        { title: "Source", items: [{ label: "GitHub", href: "https://github.com/dPhong31415/ontos-docs" }] },
       ],
-      copyright: `© ${new Date().getFullYear()} jobradar`,
+      copyright: `© ${new Date().getFullYear()} Ontos`,
     },
     prism: { theme: prismThemes.dracula, darkTheme: prismThemes.dracula },
   } satisfies Preset.ThemeConfig,
