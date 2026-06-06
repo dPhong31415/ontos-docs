@@ -45,6 +45,7 @@ const sidebars: SidebarsConfig = {
             { type: "doc", id: "whip-system-design",   label: "🏗 System Design" },
             { type: "doc", id: "whip-data-model",      label: "🗄 Project Document" },
             { type: "doc", id: "whip-behaviors",       label: "🎚 Smart Animation" },
+            { type: "doc", id: "whip-content-view",    label: "📑 Content View" },
             { type: "doc", id: "whip-look",            label: "🎨 Signature Look" },
             { type: "doc", id: "whip-interaction",     label: "🖱 Interaction & Canvas" },
             { type: "doc", id: "whip-api",             label: "🔌 Command API" },

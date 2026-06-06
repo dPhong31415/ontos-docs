@@ -58,6 +58,48 @@ chỉ thấy "Smooth Punch". Muốn tinh chỉnh thì mở curve editor (dưới
 
 ---
 
+## Properties panel — control thật, không chỉ keyframe
+
+Panel clip phải có **control number + slider + toggle** cho mọi property (như Sound Settings của
+CapCut / panel Spline), không bắt user đặt keyframe mới chỉnh được:
+
+```
+TRANSFORM
+  Scale     ──●────────  [1.00] ◆     ← slider + number + nút key
+  Opacity   ●──────────  [1.00] ◆
+  Rotation  ──────●────  [0°]   ◆
+  Pos  X [0]  Y [0]
+SPEED   [0.5x] [1x] [1.5x] [2x]
+```
+
+- Kéo slider/sửa number → set value tại playhead (tự thành keyframe nếu clip đã animate).
+- Nút **◆** = thêm keyframe tại playhead. User mới không cần hiểu keyframe vẫn chỉnh được.
+
+🩻 Có trong `ClipPanel`: slider+number cho Scale/Opacity/Rotation + Pos X/Y; Speed preset (stub).
+
+---
+
+## Curve Editor — MỘT graph cho mọi property
+
+**Không** mỗi property một graph. Một graph chung, **chọn property hiện qua chip** (kiểu filter, như
+graph editor của AE):
+
+```
+GRAPH   [Scale] (Opacity) (Rotation)   ← chip bật/tắt đường nào hiện
+┌────────────────────────────────────┐
+│      ╱‾‾‾‾ (scale, tím)              │
+│    ╱                                 │
+│  ╱   ___ (opacity, xanh)            │
+│ ╱___╱                               │
+└────────────────────────────────────┘
+   mỗi property một màu, chồng trên cùng trục thời gian
+```
+
+🩻 Có trong `ClipPanel`: unified graph, chip toggle Scale/Opacity/Rotation, mỗi đường một màu,
+playhead line. TODO: kéo keyframe + bezier handle trực tiếp trên graph.
+
+---
+
 ## Curve Editor — đủ mọi interpolation
 
 Có, **đủ** mọi mode như AE (đây là phần override, dùng khi cần — phần lớn để [behavior](./whip-behaviors.md) lo):

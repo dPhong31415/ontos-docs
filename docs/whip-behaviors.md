@@ -185,6 +185,29 @@ không phải bảng keyframe tĩnh.
 
 ---
 
+## UI: behavior = action-card, không phải keyframe
+
+User **không nhìn keyframe** trên timeline. Họ thấy một **chuỗi action-card nối nhau** (kiểu Unreal
+Sequencer): mỗi behavior là một thẻ có tên + span thời gian.
+
+```
+Clip "interview" ─ actions:
+  ┌──────────────┐ ┌───────────────┐ ┌──────────────┐
+  │ ⚡ Smooth Punch│ │ 🔍 Zoom: graph │ │ ✨ Fade out   │
+  └──────────────┘ └───────────────┘ └──────────────┘
+        0–1.2s          8–12s            14–15s
+  (keyframe ẩn bên dưới — là output compiled của các card này)
+```
+
+- Thêm action = chọn từ thư viện preset (Smooth Punch, Zoom to region…), không đặt keyframe.
+- Sửa card (amount/ease/region) = sửa param, compiler sinh lại keyframe.
+- Muốn tay: mở card → "bake" → curve editor ([Signature Look](./whip-look.md#curve-editor)).
+
+🩻 Scaffold: `ClipPanel` mục **Actions** hiện behavior card (derive từ `kf.source`). TODO: card có
+span, kéo được, gắn vào [Content View](./whip-content-view.md) event.
+
+---
+
 ## Vì sao điều này hợp với agent
 
 Agent **không rải keyframe** (dễ sai, khó review). Agent làm việc ở tầng **ý nghĩa**:
