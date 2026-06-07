@@ -1,0 +1,200 @@
+---
+id: whip-gtm-launch
+title: Go-To-Market & Launch (MVP)
+sidebar_label: 🚀 GTM & Launch
+sidebar_position: 12
+---
+
+# Whip — Go-To-Market, Moat & Launch Playbook
+
+> Mục tiêu: **MVP có người trả tiền trong tuần này.** Dev solo ở VN, không công ty US.
+> Tài liệu này = moat/USP + pricing + hạ tầng chi phí + pháp lý + các bước promotion step-by-step.
+
+---
+
+## 0. Hướng đã CHỐT (07/06/2026) — đọc trước
+
+- **Positioning: NHỌN vào talking-head viral.** Bán = *"làm reel talking-head kiểu Gadzhi/Ali — text động + auto zoom, web, 5 phút"*. Shapes / graph editor / keyframe / MCP là **moat ẩn** (chiều sâu), **KHÔNG** lên ad. Không pitch "browser AE".
+- **Monetize: LIFETIME $59 TRƯỚC** (100 suất đầu, sau $99) → tiền mặt ngay, 0 backend, validate willingness-to-pay. Subscription $8.99/mo bật **sau** khi có ~50 khách.
+- **Việc chặn tiền đầu tiên = ống bán hàng, KHÔNG phải feature.** Feature đã thừa. Cần: deploy + Gumroad/LS + legal host + 1 demo video + landing. → **đóng băng feature, dồn vào launch.**
+- Asset đã dựng: `whip/landing/index.html` (landing 1 trang, talking-head + Lifetime $59) · `whip/landing/DEMO-SCRIPT.md` (script demo 45–60s, dùng nút ✨ Demo làm hero).
+
+---
+
+## 1. Định vị một câu (positioning)
+
+> **Whip = công cụ làm reel talking-head viral (kiểu Gadzhi/Ali) — text động + auto punch-in zoom + caption, chạy thẳng trên trình duyệt, GPU export, xuất trong 5 phút.**
+
+Không phải "another editor", cũng KHÔNG bán là "browser AE". Nhọn vào **người làm short-form talking-head** (coach, course creator, founder update, faceless caption) — tệp trả tiền để *ra video nhanh*, không muốn học AE.
+
+---
+
+## 2. Moat & USP (vì sao khó copy)
+
+| # | USP | Vì sao là moat |
+|---|---|---|
+| 1 | **Smart Animation — bind motion vào lời nói** (zoomToRegion, không keyframe tay) | Không tool nào có. Trim lời → animation tự dời. [whip-behaviors](./whip-behaviors.md). Đây là **moat sản phẩm** dài hạn. |
+| 2 | **Agent-drivable** (project = JSON, sửa qua command có schema) | Mở đường cho "AI edit video" — v2. Đối thủ kiến trúc code (Remotion) hoặc binary (AE) không làm sạch được. |
+| 3 | **Browser-native + WebCodecs GPU render** | Không cài đặt, không account nặng, render nhanh. CapCut desktop nặng; Resolve/AE khổng lồ. |
+| 4 | **Preset viral đóng gói** (Hormozi pop, glitch, chromatic, spring zoom…) | Người làm short-form cần *tốc độ ra video*, không cần học AE. 38 preset semantic-named. |
+| 5 | **Giá + MoR cho thị trường global từ VN** | Lemon Squeezy lo thuế/chargeback → dev VN bán global không cần công ty US. |
+
+**Moat thật sự = #1 + #2** (data-model + behaviors). #3/#4/#5 là lợi thế nhập cuộc, dễ bị bắt chước; #1/#2 cần kiến trúc từ gốc — đối thủ phải viết lại engine.
+
+**Tagline bán hàng:** *"Made with Whip."* — watermark free tier chính là cỗ máy marketing.
+
+---
+
+## 3. Pricing — LIFETIME-first (đã chốt)
+
+| Tier | Giá | Gồm |
+|---|---|---|
+| **Free** | $0 | Export 1080p, **watermark "Made with Whip"**, preset cơ bản + shapes/text/caption |
+| **Pro Lifetime (Launch)** | **$59 một lần** (100 suất đầu) | Xóa watermark · 4K/60fps · **toàn bộ viral preset 👑** · update tương lai · 7-day money-back |
+| Pro Lifetime (sau 100) | $99 một lần | như trên |
+| Pro Subscription (v2) | $8.99/mo | bật **sau** khi có ~50 khách + cloud sync |
+
+**Vì sao Lifetime trước:** solo dev cần cash sớm, từ 0 audience subscription ra tiền chậm. Lifetime = tiền mặt ngay, 0 backend (chỉ cần Gumroad), validate giá nhanh. Subscription để dành cho lúc có traffic + feature cloud.
+
+**The Hook:** *"Lifetime $59 cho 100 người đầu — pay once, own forever, kể cả khi có AI auto-edit. Sau đó lên $99 rồi chuyển sang thuê bao. Khóa ngay."* → FOMO + anchor $99.
+
+> Đã code: `FREE_PRESETS` set trong `engine/presets.ts`; watermark trong `engine/export.ts`; paywall gate trong `store.applyPreset`.
+
+---
+
+## 4. Hạ tầng & chi phí MVP (dev VN, scale dần)
+
+### 4.1 Hiện trạng (MVP today — chi phí ~$0)
+Whip **client-only**: project lưu `localStorage` + media bytes ở **OPFS** (Origin Private File System) trong máy user. Không cần server lưu file → **không tốn tiền hosting storage** giai đoạn đầu.
+
+| Hạng mục | Giải pháp MVP | Chi phí |
+|---|---|---|
+| Host app (static SPA) | **Vercel / Cloudflare Pages** (free tier) | $0 |
+| Domain | `whipeditor.com` (Namecheap/Cloudflare) | ~$10/năm |
+| Lưu media user | **OPFS local** (đã có, `engine/assetStore.ts`) | $0 |
+| Thanh toán + thuế | **Lemon Squeezy** (MoR) | 5% + 50¢/giao dịch (chỉ khi có doanh thu) |
+| License check | **LS License API** (client-side, không backend) | $0 |
+| Pháp lý (Terms/Privacy/Refund) | gen template (xem §6) | $0 |
+
+→ **Burn rate MVP ≈ $10/năm.** Có thể launch ngay hôm nay.
+
+### 4.2 Khi cần "user up file lên lưu trữ cloud" (sau khi có trả phí)
+Đây là feature **Pro** (project sync đa thiết bị + media cloud). Lựa chọn rẻ→scale:
+
+| Layer | Khuyến nghị | Lý do |
+|---|---|---|
+| Object storage media | **Cloudflare R2** | **$0 egress** (quan trọng cho video!), $0.015/GB-tháng. S3 tính egress đắt → tránh. |
+| DB user/subscription | **Supabase** (Postgres free 500MB) hoặc **Cloudflare D1** | Free tier rộng, auth sẵn (Supabase Auth) |
+| Backend/API + webhook | **Cloudflare Workers** / **Supabase Edge Functions** | Serverless, free tier lớn, nhận LS webhook → set `is_pro` |
+| Auth | **Supabase Auth** (magic link / Google) | Khỏi tự code |
+
+→ Chi phí khi có ~100 Pro user: vẫn trong free/near-free tier, ước dưới $20/tháng. R2 egress free là chìa khoá vì video tốn băng thông.
+
+### 4.3 Ontos — launch chung hay tách?
+**Khuyến nghị: KHÔNG block MVP Whip vào Ontos.** Lý do:
+- Whip MVP cần ship *hôm nay*; Ontos platform (Elixir, ontology) là tầm nhìn dài hạn — build chung sẽ chậm và over-engineer.
+- **Nhưng giữ đường tương thích:** project = JSON qua command-layer có schema (đã làm) → sau này Ontos chỉ là **backend đồng bộ + agent host**, không phải viết lại Whip.
+
+**Lộ trình tách → hội tụ:**
+1. **Now (MVP):** Whip standalone, client-only, LS license. Ship.
+2. **+Cloud (khi có doanh thu):** thêm Supabase + R2 cho sync/auth/webhook. Whip vẫn chạy offline-first.
+3. **+Ontos (v2):** Ontos thành "control plane" — host agent (auto-edit), ontology đa app. Whip là app con đầu tiên cắm vào, qua đúng command API hiện có. Không refactor engine.
+
+→ Ontos là **đích đến kiến trúc**, không phải điều kiện launch. Build Whip sạch theo data-model là đã "Ontos-ready".
+
+### 4.4 Media storage: OPFS L1 cache + Relink fallback (kiến trúc đã chốt)
+Mục tiêu: mượt như native app, **không bao giờ mất dữ liệu**, vẫn rẻ.
+- **L1 cache (OPFS):** import file → **Web Worker** copy bytes vào OPFS (KHÔNG block UI khi copy video 4K hàng GB — bắt buộc đẩy xuống worker). Project JSON lưu "chữ ký" asset `{id, name, size, opfs_path}`.
+- **Khôi phục siêu tốc:** mở lại / F5 → quét JSON → đọc thẳng OPFS (0.1s). 99% trường hợp file còn đó.
+- **Ultimate fallback (Relink):** OPFS bị browser dọn rác / mở JSON ở máy khác → OPFS null → hiện **khối đỏ Media Offline**, yêu cầu trỏ lại file gốc (khớp `size` chữ ký) → nối lại keyframe + copy vào OPFS máy mới.
+- → Che giấu sự mỏng manh của Web SPA: load nhanh (OPFS) + an toàn (relink). Hiện `engine/assetStore.ts` đã dùng OPFS; cần thêm: copy qua Web Worker + relink UI + size-signature trong schema asset.
+
+### 4.5 Backend real-time (Elixir/Phoenix trên Fly.io) — khi lên Agent/collab
+BEAM gánh hàng ngàn WebSocket/RAM nhỏ; video decode/encode ở **local (OPFS/WebCodecs)** nên server chỉ điều phối **text JSON + lệnh API** → băng thông ~0.
+- Compute: `shared-cpu-1x` 256MB ~ dưới $2/máy; deploy 2 máy (SG+US) cluster → vẫn trong **hoá đơn tối thiểu $5/tháng**.
+- Egress: free ~100GB đầu (dùng thực ~0 vì video ở local), sau $0.02/GB.
+- Postgres 1GB ~ $4–5/tháng (user, session Lemon Squeezy, project metadata).
+- **Tổng ~$10/tháng** cho hạ tầng real-time phân tán toàn cầu, sẵn cho AI Agent sửa video đồng thời.
+
+→ MVP hiện tại **chưa cần** backend này (client-only + LS license). Bật khi mở **cloud sync / collab / AI agent live**.
+
+---
+
+## 5. Tích hợp Lemon Squeezy (đã code sẵn client)
+
+Đã làm trong app: `engine/license.ts`, `components/Paywall.tsx`, gate ở `store`.
+
+**Việc cần làm trên dashboard LS (≈15 phút):**
+1. Đăng ký lemonsqueezy.com → tạo Store "Whip".
+2. Settings → Payout: nối **tài khoản ngân hàng VN** (Wire) hoặc **Payoneer**. LS payout mỗi ~15 ngày.
+3. Tạo Product **"Whip Pro"**, type **Subscription**, $8.99/mo. Bật **License keys** (Settings sản phẩm → "Generate license keys").
+4. Copy **Checkout URL** của variant → dán vào `LEMON.checkoutUrl` trong `engine/license.ts`.
+5. (v2) Webhook → backend set `is_pro`. MVP dùng license-key activate, không cần webhook.
+
+**Luồng user:** chạm preset 👑 → Paywall mở → "Nâng cấp Pro" → LS checkout → email license key → user dán key vào Paywall → `activateLicense()` validate qua LS API → `isPro=true` → unlock + xóa watermark.
+
+---
+
+## 6. Pháp lý bắt buộc (LS review trước khi cho live)
+
+Footer phải có 3 trang (LS từ chối nếu thiếu):
+- **Terms of Service** · **Privacy Policy** · **Refund Policy**
+
+Không cần luật sư. Gen bằng **Termly** / **iubenda** (free) hoặc LLM cho "SaaS digital product", host static cùng app (`/terms`, `/privacy`, `/refund`).
+
+**Refund (chọn 1):**
+- ✅ **Money-back 7 ngày** (khuyên cho giai đoạn đầu — tăng tỉ lệ chốt): *"Hoàn 100% trong 7 ngày nếu app không export được như quảng cáo."*
+- Zero-refund: *"Có gói Free để thử, nên giao dịch Pro không hoàn lại."*
+
+Bản nháp đã đặt ở `whip/legal/` (terms.md, privacy.md, refund.md) — review rồi host.
+
+---
+
+## 7. Promotion — step-by-step để có subscriber
+
+### Tuần 0 — chuẩn bị (1-2 ngày)
+1. ✅ Build features + paywall (xong).
+2. Điền `LEMON.checkoutUrl`, host app lên Vercel + domain.
+3. Host 3 trang legal. Bật LS live.
+4. Quay **demo 30-60s**: import → punch-in + Hormozi text + glitch → export. Watermark "Made with Whip" hiện rõ (chính là quảng cáo).
+5. Landing page 1 trang: hero demo gif + nút "Try free" + bảng giá Early Bird + FAQ.
+
+### Tuần 1 — launch (kênh không tốn tiền, đúng tệp)
+| Kênh | Cách làm | Vì sao hiệu quả |
+|---|---|---|
+| **Reddit** r/VideoEditing, r/NewTubers, r/SideProject | Post "I built a browser video editor with viral presets — free, no install" + demo gif | Tệp creator short-form đúng target |
+| **X/Twitter build-in-public** | Thread demo từng preset (Hormozi pop, glitch). Tag #buildinpublic | Preset viral tự nó là content |
+| **TikTok/Reels** | Đăng video edit *bằng chính Whip* — watermark = funnel. CTA "edited with Whip, link bio" | Sản phẩm tự quảng cáo, vòng lặp viral |
+| **Product Hunt** | Launch ngày thứ 3-4 trong tuần, sáng PST. Chuẩn bị 10-15 upvote mồi | Burst traffic + backlink |
+| **Indie Hackers / Hacker News** ("Show HN") | "Show HN: Whip – agent-drivable browser video editor" | Dev/early adopter, nhấn mạnh USP data-model |
+| **Cộng đồng VN** (Facebook group dựng phim, content creator) | Bản tiếng Việt, nhấn "free, chạy web, có preset viral" | Tệp gần, dễ feedback nhanh |
+
+### Đòn bẩy chuyển đổi (đã build vào app)
+- **Watermark** free → mỗi video user xuất là 1 quảng cáo.
+- **👑 trên preset viral** → tò mò → chạm → Paywall (đã code).
+- **Early Bird FOMO** "500 user đầu, khóa giá vĩnh viễn".
+- **7-day money-back** giảm rủi ro tâm lý khi quẹt thẻ.
+
+### Tuần 2+ — vòng lặp
+- Mỗi preset mới = 1 video demo = 1 post.
+- Thu feedback → fix → "shipped this week" post (build-in-public giữ nhiệt).
+- Khi đủ ~50 paying: bật webhook + cloud sync (Pro feature mới) → nâng giá public $15 cho user mới (Early Bird vẫn $8.99).
+
+---
+
+## 8. Chỉ số theo dõi (đơn giản)
+- **Activation:** % user import + export ít nhất 1 video.
+- **Free→Pro CVR:** mục tiêu 2-5% giai đoạn đầu.
+- **Watermark reach:** đếm video "Made with Whip" ngoài thị trường (search hashtag).
+- **MRR:** Lemon Squeezy dashboard.
+
+---
+
+## 9. Checklist launch (tick là live được)
+- [ ] `LEMON.checkoutUrl` đã điền (variant thật)
+- [ ] LS product Pro + license keys bật + payout VN nối
+- [ ] App deploy Vercel + custom domain
+- [ ] 3 trang legal host + link ở footer
+- [ ] Demo video + landing page
+- [ ] Test e2e: free export (có watermark) → mua → activate key → export sạch (4K) ✓
+- [ ] Post Reddit + X + Product Hunt scheduled
