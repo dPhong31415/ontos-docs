@@ -26,6 +26,32 @@ sidebar_position: 4
   "aspect": "16:9",          // "9:16" | "1:1" | "4:5" | "2.39:1"
   "duration": 142.5,
 
+  // ── Preset Registry ──────────────────────────────────────────────────
+  // Import từ Preset Builder output hoặc Marketplace download
+  // Engine chỉ đọc compiled field; graph field dành cho Preset Builder editor
+  "presetRegistry": {
+    "gawx_cinematic": {
+      "type": "look",
+      "compiled": { "effects": [
+        {"type":"colorCorrect","params":{"liftB":-0.02,"saturation":0.85}},
+        {"type":"bloom",      "params":{"threshold":0.75,"intensity":0.3}},
+        {"type":"filmGrain",  "params":{"amount":0.15}},
+        {"type":"rgbSplit",   "params":{"offset":1.5}}
+      ]}
+    },
+    "hormozi_bold": {
+      "type": "look",
+      "compiled": { "effects": [
+        {"type":"colorCorrect","params":{"contrast":0.15,"saturation":0.2}},
+        {"type":"bloom",      "params":{"threshold":0.6,"intensity":0.5}},
+        {"type":"vignette",   "params":{"intensity":0.4}}
+      ]}
+    },
+    "hard_cut":           { "type":"transition","compiled":{"type":"cut","duration":0} },
+    "cross_dissolve":     { "type":"transition","compiled":{"type":"crossDissolve","duration":0.3} },
+    "auto_duck_podcast":  { "type":"audio","compiled":{"duckDb":-14,"attackMs":200,"releaseMs":800} }
+  },
+
   // ── Assets ────────────────────────────────────────────────────────────
   "assets": {
     "a_video":   { "type": "video",  "src": "interview.mp4",
@@ -76,8 +102,13 @@ sidebar_position: 4
             "opacity":  [ {"t":0,"v":1} ],
             "crop":     [ {"t":0,"v":[0,0,0,0]} ]   // [top, right, bottom, left] normalized
           },
+          "lookPresetId": "gawx_cinematic",  // OPTIONAL: live reference tới preset (xem §Preset System)
+          "transitionIn":  { "presetId": "hard_cut" },   // preset cho cut vào đầu clip
+          "transitionOut": { "presetId": "cross_dissolve", "duration": 0.3 }, // preset cut ra
           "effects": [
             // ── Color / Look ──
+            // Nếu lookPresetId set → engine MERGE baked params dưới đây với preset definition
+            // applyPreset() bake preset vào đây; lookPresetId giữ để biết nguồn gốc
             { "id":"e_grade", "type":"colorCorrect",
               "params": {
                 "liftR":0, "liftG":0, "liftB":0,           // shadows
@@ -165,6 +196,7 @@ sidebar_position: 4
           "start": 0, "end": 142.5, "in": 0,
           "gainDb": -6,
           "pitchLock": true,         // pitch không đổi khi speed thay đổi
+          "audioPresetId": "auto_duck_podcast",   // OPTIONAL: reference audio preset
           "automation": {
             "gainDb": [ {"t":0,"v":-6},{"t":40,"v":-18},{"t":48,"v":-6} ]  // ducking
           },
@@ -184,7 +216,8 @@ sidebar_position: 4
   "transitions": [
     {
       "id":"x1", "between":["c1","c2"],
-      "type": "crossDissolve",     // crossDissolve | dipToBlack | wipe | flashCut | zoomCut
+      "presetId": "cross_dissolve",   // OPTIONAL: reference preset → baked params dưới đây
+      "type": "crossDissolve",        // crossDissolve | dipToBlack | wipe | flashCut | zoomCut | whipPan | glitchCut
       "duration": 0.5,
       "ease": "smooth"
     }
@@ -553,6 +586,106 @@ Overlay Clip          (wrapper) + blendMode, maskId, transform
 ```
 
 → Xem thêm: [Preset Library](./whip-look) · [Whip It pipeline F11](./whip-features) · [MCP commands](./whip-mcp)
+
+---
+
+## Preset System — cách preset kết nối vào schema
+
+### Bake vs Reference
+
+Preset **không thay thế** schema — chúng được áp vào schema theo 2 cách:
+
+```
+┌── Reference (live link) ─────────────────────────────────────────────┐
+│  clip.lookPresetId = "gawx_cinematic"                                 │
+│  → Engine tra preset registry → merge params vào effects[] khi render │
+│  → Đổi preset definition → TẤT CẢ clip dùng preset đó cập nhật       │
+│  → Dùng cho: team build → test nhanh → chưa cần bake                 │
+└───────────────────────────────────────────────────────────────────────┘
+
+┌── Bake (flatten) ────────────────────────────────────────────────────┐
+│  applyPreset(clipId, "gawx_cinematic")                                │
+│  → Expand preset → fill clip.effects[] trực tiếp                     │
+│  → lookPresetId vẫn giữ (để biết nguồn gốc, hiện trong UI)           │
+│  → User có thể chỉnh effects[] sau khi bake mà không ảnh hưởng preset│
+│  → Dùng cho: user apply preset → tùy chỉnh per-clip                  │
+└───────────────────────────────────────────────────────────────────────┘
+```
+
+**Quy tắc engine:** nếu `lookPresetId` set VÀ `effects[]` có dữ liệu → dùng `effects[]` (baked wins). `lookPresetId` chỉ merge nếu `effects[]` rỗng.
+
+---
+
+### Preset types và field gắn vào schema
+
+| Preset type | Field trong schema | Preset file output |
+|---|---|---|
+| **Look / Effect** | `clip.lookPresetId` + `clip.effects[]` (baked) | `type: "look"` |
+| **Caption** | `captionTrack.stylePack` | `type: "caption"` |
+| **Transition** | `transitions[].presetId` + `transitionIn/Out.presetId` | `type: "transition"` |
+| **Super / Composition** | `compositions[].style` | `type: "super"` |
+| **Audio** | `clip.audioPresetId` + `clip.fx[]` (baked) | `type: "audio"` |
+| **Template Recipe** | `styleProfile.recipeId` (Whip It) | `type: "recipe"` |
+
+---
+
+### Preset registry
+
+Preset được load từ 2 nguồn:
+
+```jsonc
+// Trong project.whip (presets user đã mua / import vào project)
+"presetRegistry": {
+  "gawx_cinematic": {
+    "id": "gawx_cinematic",
+    "name": "Gawx Cinematic",
+    "type": "look",
+    "compiled": {
+      "effects": [
+        { "type": "colorCorrect", "params": { "liftB": -0.02, "saturation": 0.85 } },
+        { "type": "bloom",        "params": { "threshold": 0.75, "intensity": 0.3 } },
+        { "type": "filmGrain",    "params": { "amount": 0.15 } },
+        { "type": "rgbSplit",     "params": { "offset": 1.5 } }
+      ]
+    }
+  },
+  "hormozi_bold": {
+    "id": "hormozi_bold", "type": "look",
+    "compiled": {
+      "effects": [
+        { "type": "colorCorrect", "params": { "contrast": 0.15, "saturation": 0.2 } },
+        { "type": "bloom",        "params": { "threshold": 0.6, "intensity": 0.5 } },
+        { "type": "vignette",     "params": { "intensity": 0.4 } }
+      ]
+    }
+  },
+  "hard_cut":         { "id": "hard_cut",    "type": "transition",
+                        "compiled": { "type": "cut", "duration": 0 } },
+  "cross_dissolve":   { "id": "cross_dissolve", "type": "transition",
+                        "compiled": { "type": "crossDissolve", "duration": 0.3, "ease": "smooth" } },
+  "auto_duck_podcast":{ "id": "auto_duck_podcast", "type": "audio",
+                        "compiled": { "duckDb": -14, "attackMs": 200, "releaseMs": 800 } }
+}
+```
+
+→ Preset từ **Preset Builder** output `.preset.json` → import vào đây.
+→ Preset từ **Marketplace** download → cũng import vào `presetRegistry`.
+→ **Engine chỉ đọc `compiled` field** — không cần biết graph node bên trong.
+
+---
+
+### `applyPreset` command flow
+
+```
+applyPreset(clipId: "c1", presetId: "gawx_cinematic")
+  1. Lookup project.presetRegistry["gawx_cinematic"]
+  2. Lấy compiled.effects[]
+  3. Merge vào clip.effects[] (thêm nếu chưa có, override nếu cùng type)
+  4. Set clip.lookPresetId = "gawx_cinematic"  // giữ để UI hiện badge "Gawx Cinematic ×"
+  5. Undo stack ghi lại trạng thái effects[] trước
+```
+
+User thấy badge preset trên clip → click `×` để remove (xóa effects[] và `lookPresetId`).
 
 ---
 
