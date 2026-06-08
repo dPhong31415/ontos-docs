@@ -64,7 +64,7 @@ const sidebars: SidebarsConfig = {
                 { type: "doc", id: "whip-features",      label: "🎯 Tính năng chi tiết" },
                 { type: "doc", id: "whip-content-view",  label: "📑 Content View" },
                 { type: "doc", id: "whip-ux",            label: "🖱 UI/UX & Shortcuts" },
-                { type: "doc", id: "whip-look",          label: "🎨 Signature Look" },
+                { type: "doc", id: "whip-look",          label: "🎨 Look & Presets" },
               ],
             },
 

@@ -1,11 +1,11 @@
 ---
 id: whip-look
-title: Signature Look (Ease + Glow)
-sidebar_label: 🎨 Signature Look
+title: Signature Look & Preset Library
+sidebar_label: 🎨 Look & Presets
 sidebar_position: 6
 ---
 
-# Signature Look — Ease Curves + Glow
+# Signature Look & Preset Library
 
 > Whip phải làm ra được **đúng** cái look talking-head viral hiện tại. Có **2 cực style** tham chiếu,
 > một **đường ease đặc trưng** (không phải linear, không phải easy-ease thường), và một **glow stack**.
@@ -181,6 +181,126 @@ applyLook(c1, "Gawx Cinematic")          // bundle grade+glow 1 lệnh
 ```
 
 → Agent nói "làm clip này kiểu Gawx, punch-in mỗi điểm nhấn" → set look + behavior, không tay.
+
+---
+
+---
+
+## Preset Library — tất cả presets cần build để launch
+
+> Mỗi preset = 1 bundle tham chiếu viral cụ thể. **Tất cả cần có trước launch v1.**
+> Cột "Viral ref" = creator style tham chiếu — tên chỉ dùng nội bộ, **tên trong app là generic** (xem [GTM §8](./whip-gtm-launch)).
+
+### Caption presets (4 — đã build)
+
+| Preset (app name) | Vibe | Font | Đặc trưng | Viral ref |
+|---|---|---|---|---|
+| **Loud** | Gào thét, đập mắt | Montserrat Black 900 | UPPERCASE, active word vàng, viền đen dày | Hormozi, MrBeast |
+| **Clean** | Tri thức, tối giản | Inter SemiBold | White nhỏ, shadow nhẹ, backdrop tối | Ali Abdaal |
+| **Cinematic** | Điện ảnh, sang | Playfair Display Italic | Serif, đặt 1/3 dưới, fade nhẹ | Gawx |
+| **Terminal** | Tech, hacker | Fira Code | Xanh #00FF00, glow mờ, monospace | MrBeast (tech) |
+
+> ✅ Đã build. Cần thêm: per-creator variant (Iman = white uppercase minimal, Hormozi = orange accent, Ali = handwritten-style highlight)
+
+---
+
+### Super presets (full-frame overlay cards — ❌ cần build)
+
+Super = text hoặc graphic element chiếm toàn frame hoặc phần lớn frame, không phải caption phụ đề.
+
+| Preset | Type | Đặc trưng | Viral ref | Whip It type |
+|---|---|---|---|---|
+| **Section Card** | Full-frame section divider | Nền đen tuyệt đối, chữ trắng to, minimal | Iman Editorial | `section_card` |
+| **Stat Slam** | Số liệu impact | Số to + label nhỏ, snap zoom in, nền solid | Hormozi | `stat_reveal` |
+| **Quote Pull** | Quote card | Chữ nghiêng, đường viền accent, clean layout | Ali Clean | `quote_card` |
+| **Energy Banner** | Lower third banner | Màu sắc nổi, nền gradient, kinetic fly-in | MrBeast | `lower_third` |
+| **Cinematic Title** | Moody title card | Grain overlay, serif italic, muted nền | Gawx Cinematic | `section_card` |
+| **Progress Bar** | Progress / checklist | Bar fill animation, step counter | Ali/Hormozi | `progress_bar` |
+| **Social Proof** | Subscriber / metric count | Counter animation lên, badge-style | MrBeast | `social_proof` |
+| **Kinetic List** | 3-item stagger reveal | Items bay vào lần lượt với delay | Iman/Ali | `kinetic_list` |
+
+---
+
+### Graphic / Callout presets (❌ cần build)
+
+| Preset | Type | Đặc trưng | Viral ref | Whip It type |
+|---|---|---|---|---|
+| **Arrow Callout** | Callout arrow + label | Mũi tên handdrawn-style chỉ vào object | Ali Clean | `callout_arrow` |
+| **Circle Highlight** | Vòng tròn nhấn mạnh | Animated circle vẽ quanh subject | Hormozi | `callout_arrow` |
+| **B-roll Suggest** | B-roll placeholder | Mô tả visual cần b-roll, replace thủ công | All | `broll_suggest` |
+| **Logo Sting** | Intro/outro logo animation | Fade-scale logo + tagline | All | `logo_sting` |
+
+---
+
+### Transition presets (❌ cần build)
+
+| Preset | Type | Cơ chế | Viral ref |
+|---|---|---|---|
+| **Hard Cut** | Instant cut, không effect | Pure cut, tốc độ cao | Iman, Hormozi |
+| **Whip Pan** | Blur wipe sang ngang | Motion blur sweep L→R hoặc R→L | MrBeast, energetic |
+| **Zoom Punch Through** | Zoom in cắt qua | Scale lên 1.0→1.3, cut, scale down | Ali, viral punch |
+| **Cross Dissolve** | Fade chéo | Opacity fade A→B overlap 0.3s | Gawx, cinematic |
+| **Flash Cut** | White flash | Opacity 0→1→0 trắng 1 frame | MrBeast |
+| **Dip to Black** | Fade đen | Opacity → 0 → fade in | Cinematic, end |
+| **Glitch Cut** | RGB split + noise | Chromatic aberration burst 2-3 frames | Tech/hacker |
+
+---
+
+### Effect / Look presets (bundle — ❌ cần build)
+
+Mỗi preset = bundle nhiều effect layers, 1 click apply cho toàn clip.
+
+| Preset | Effect stack | Viral ref |
+|---|---|---|
+| **Gawx Cinematic** | Milky blacks tone curve + bloom 0.3 + haze overlay + grain 0.15 + chromatic aberration | Gawx Art |
+| **Hormozi Bold** | High contrast (+0.15) + saturation (+0.2) + vignette hard + sharpen | Alex Hormozi |
+| **Ali Clean** | Desaturate −0.3 + selective color (skin warm) + subtle bloom 0 + bright whites | Ali Abdaal |
+| **MrBeast Energy** | Saturation +0.4 + liftR +0.05 + vignette medium + bloom 0.5 | MrBeast |
+| **Iman Editorial** | Muted tones (sat −0.15) + cool shadows + crisp (contrast +0.1) + no grain | Iman Gadzhi |
+| **Viral Raw** | Slight overexpose + warm highlights + no effects | Authenticity look |
+
+---
+
+### Music / Audio presets (❌ cần build)
+
+| Preset | Settings | Dùng khi | Viral ref |
+|---|---|---|---|
+| **Auto Duck Podcast** | −14 dB duck, attack 200ms, release 800ms | Long-form, nhạc nền nhẹ | Ali, podcast |
+| **Auto Duck Aggressive** | −20 dB duck, attack 80ms, release 400ms | High-energy, nhạc to | Hormozi, MrBeast |
+| **Snap to Beat** | Cut points snap to 1/4 note grid | Montage, music-driven | MrBeast, viral |
+| **Silence Cut** | VAD threshold −40dB, min 0.4s | Dead air removal | All |
+| **Noise Removal** | Broadband noise gate + spectral denoise | Talking-head clean-up | All |
+
+---
+
+### Template Recipes (Whip It — 5 bundles — ❌ cần build)
+
+Recipe = tổng hợp caption + super + effect + transition + graphic thành 1 pipeline.
+
+| Recipe | Caption | Super | Effect look | Transition | Graphic style |
+|---|---|---|---|---|---|
+| **Iman Editorial** | Clean uppercase minimal | Section Card (black) | Iman Editorial | Hard Cut | Bold section headers, geometric |
+| **Hormozi Bold** | Loud (orange accent) | Stat Slam | Hormozi Bold | Hard Cut + Flash | Big callouts, metric counters |
+| **Ali Clean** | Clean (handwritten-style highlight) | Quote Pull | Ali Clean | Zoom Punch Through | Arrow Callout, chapter cards |
+| **MrBeast Energy** | Loud (bright) | Energy Banner + Social Proof | MrBeast Energy | Whip Pan + Flash | Bright stickers, score counters |
+| **Gawx Cinematic** | Cinematic | Cinematic Title | Gawx Cinematic | Cross Dissolve | Minimal text, moody overlays |
+
+---
+
+### Build checklist
+
+| Nhóm | Số lượng | Trạng thái |
+|---|---|---|
+| Caption presets | 4 | ✅ Done |
+| Super presets | 8 | ❌ Cần build |
+| Graphic / callout | 4 | ❌ Cần build |
+| Transition presets | 7 | ❌ Cần build |
+| Effect/look bundles | 6 | ❌ Cần build |
+| Audio presets | 5 | ❌ Cần build |
+| Template Recipes | 5 | ❌ Cần build (= Whip It recipes) |
+
+→ Tất cả nhóm trên đều là **P1 trước launch** — không có presets thì Whip It pipeline không có gì để apply.
+→ Spec Whip It pipeline đầy đủ: [F11 — Whip It](./whip-features) · [Schema](./whip-data-model)
 
 ---
 
