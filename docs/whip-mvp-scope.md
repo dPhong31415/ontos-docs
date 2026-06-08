@@ -7,139 +7,259 @@ sidebar_position: 5
 
 # MVP Status & Roadmap
 
-> **Đây là bảng sự thật** — cái gì đã build xong, cái gì đang làm, cái gì chưa làm.
-> Cập nhật thủ công sau mỗi sprint.
+> Audit thật sự từ codebase — không chung chung. Mỗi tính năng có test case cụ thể, edge case nào chưa xử lý, và gap nào cần fix trước launch.
 
 ---
 
-## Trạng thái hiện tại (June 2026)
+## 1. Timeline Interactions
 
-### ✅ Đã hoàn thiện — Production
+### ✅ Hoạt động tốt
+- **Drag clip**: Kéo clip sang trái/phải, cross-track (video↔video, audio↔audio), giữ nguyên in-point
+- **Trim cạnh clip**: Kéo 8px cạnh trái/phải, hiện bracket khi đụng src boundary (`atSrcStart`/`atSrcEnd`)
+- **Snap to clip edges + playhead**: Ngưỡng 8px, có toggle bật/tắt, `magnetMain` mode ưu tiên track V1
+- **Multi-select**: Shift+click additive, marquee 2D (kéo vùng chọn), group move giữ relative positions
+- **Zoom/pan**: Cmd+wheel zoom trục time (giữ cursor), Shift+wheel pan ngang, middle-button pan
+- **Keyboard**: B/W = razor split all, Cmd+K = split selected, Q = trim left, E = trim right
+- **Ripple delete khi split/cut**: Hoạt động khi `rippleEnabled = true`
+- **Playhead click**: Click ruler để set playhead, Cmd+click snap
 
-| Tính năng | Mô tả | File chính |
+### ⚠️ Partial
+- **Group drag**: Chỉ cùng track kind — không thể kéo nhóm video+audio cùng lúc sang track khác
+- **Ripple trim**: Ripple chỉ chạy khi **split/cut**, KHÔNG chạy khi **trim cạnh clip** — đây là gap lớn
+- **Waveform scroll**: Hiện chỉ clip trong viewport, không optimize infinite scroll
+
+### ❌ Chưa có — cần cho launch
+| Gap | Impact | Ưu tiên |
 |---|---|---|
-| ✅ Engine render (PixiJS WebGL) | Render video/image/text lên canvas 60fps | `compositor.ts` |
-| ✅ Keyframe + Bezier easing | Animate mọi thuộc tính, 7 preset easing | `interpolate.ts`, `ease.ts` |
-| ✅ Multi-track timeline | Video + Audio tracks, drag/trim/split | `Timeline.tsx`, `store.ts` |
-| ✅ Speed ramp | Slow-mo, time-remap, reverse | `speed.ts` |
-| ✅ Text overlay | Font, size, color, weight, alignment | `compositor.ts` |
-| ✅ Text effects | Shadow, glow (Figma-style stackable) | `TextEffects.tsx` |
-| ✅ Gradient fill chữ | Linear gradient trên text | `compositor.ts` |
-| ✅ Shape primitives | Rect, ellipse, line, background | `compositor.ts` |
-| ✅ Effects stack | Bloom, chromatic aberration, film grain, vignette, color correct, light leak | `effects.ts` |
-| ✅ Smart behaviors | zoomToRegion, sequenceReveal, punchOnEmphasis | `behaviors.ts` |
-| ✅ Auto-viral caption | Word-level Deepgram, 4 style packs, 3 pacing modes | `captionService.ts` |
-| ✅ SmartLink caption | Caption tự bám audio khi cắt/dời — không lệch | `captions.ts` |
-| ✅ Caption per-block style override | Mỗi block có thể có style riêng | `CaptionBlockPanel.tsx` |
-| ✅ Scene view | Nhóm clip thành cảnh (storyboard view) | `SceneView.tsx` |
-| ✅ Preset browser | Style pack preset nhanh | `PresetBrowser.tsx` |
-| ✅ Asset store | Quản lý video/audio/image assets | `assetStore.ts` |
-| ✅ Clip constraint | Figma-style anchor clip vào clip khác | `project.ts` |
-| ✅ Export H.264 | WebCodecs, 1080p free / 4K pro | `export.ts` |
-| ✅ Multiple aspect ratios | 9:16, 16:9, 1:1, 4:5 | `project.ts` |
-| ✅ Auth + billing | Clerk login, LemonSqueezy subscription | `license.ts` |
-| ✅ Project persistence | Save/load project JSON | `projectFolder.ts` |
-
-### 🔄 Scaffold — Đang hoàn thiện
-
-| Tính năng | Mô tả | Còn thiếu gì |
-|---|---|---|
-| 🔄 MCP tools | Schema defined, tools listed | MCP server thật (SharedWorker), wiring |
-| 🔄 Audio FX | Schema defined (EQ, compressor, limiter) | UI đầy đủ, WebAudio wiring |
-| 🔄 Transitions | Schema defined (crossDissolve, wipe, dip) | Shader implementation |
-| 🔄 Overlay system | Schema defined (caption/super/disclaimer span) | UI components |
-| 🔄 TwelveLabs integration | API wired, polling flow | UX hoàn thiện, CORS proxy |
-| 🔄 Cloud save/share | Cloudflare Worker endpoint | UI, versioning |
-
-### ❌ Chưa làm — Roadmap
-
-| Tính năng | Phase | Lý do chưa làm |
-|---|---|---|
-| ❌ WebGPU renderer | v2 | Cần WebGPU stable + expertise |
-| ❌ Zero-copy VideoFrame | v2 | Phụ thuộc WebGPU |
-| ❌ OPFS large file | v2 | File System Access API cần UX careful |
-| ❌ SQLite in OPFS | v2 | Phụ thuộc OPFS |
-| ❌ Semantic anchor DAG | v2 | Core moat, cần architecture rewrite |
-| ❌ Beat map extraction | v2 | On-device DSP hoặc API |
-| ❌ On-device Whisper | v2 | WebGPU model loading |
-| ❌ Yjs CRDT | v3 | Offline + collab |
-| ❌ WebTransport | v3 | Sau CRDT |
-| ❌ Collaborative editing | v3 | Sau CRDT |
-| ❌ Video LLM semantic analysis | v3 | Sau semantic graph |
+| Snap to beat / BPM grid | Creator hay dùng khi sync nhạc | P1 |
+| Multi-clip trim | Không thể trim nhiều clip cùng lúc | P1 |
+| Slip/slide (trim 2 cạnh giữ độ dài) | Workflow pro cơ bản | P1 |
+| Right-click context menu (cut/copy/paste/disable) | UX cơ bản | P1 |
+| Cmd+C/Cmd+V copy-paste clip | Mọi editor đều có | P1 |
+| Cmd+Z / Cmd+Shift+Z undo/redo keybindings | **Undo/redo có trong store nhưng không có shortcut** | P0 🔴 |
+| Marker/cue hiển thị trên ruler | project.cues tồn tại nhưng không render | P2 |
+| Disabled clip dimming trên timeline | toggleClipDisabled hoạt động nhưng không có visual feedback | P2 |
+| Track lock | Tránh edit nhầm | P2 |
+| Link/unlink audio track | detachAudio có, reattach không có | P2 |
+| Drag source từ MediaPool tự tạo track mới | Phải tạo track tay rồi mới drag vào | P1 |
 
 ---
 
-## MVP Definition (Launch target)
+## 2. Store / Command System
 
-**MVP = Editor đủ dùng cho creator talking-head + Auto-caption viral + Auth/Billing.**
+### ✅ Hoạt động tốt
+86 actions, tất cả implement bằng Immer draft + gesture-based undo grouping. Các nhóm đều đủ:
+- Clip manipulation, keyframe, caption, behavior, track, project — xem [`store.ts`](https://github.com/dPhong31415/whip)
 
-Đây là thứ creator cần mỗi ngày và đủ để charge tiền:
-
-```
-✅ Import video từ máy
-✅ Cut/trim/split basic
-✅ Zoom punch-in tự động (behaviors)
-✅ Auto caption word-level (killer feature)
-✅ Caption style viral (loud/clean/cinematic)
-✅ Export 1080p MP4 (free) / 4K (pro)
-✅ Login + token system
-```
-
-**MVP KHÔNG cần:**
-- WebGPU (WebGL đủ cho 1080p)
-- Collab / CRDT
-- Semantic anchor DAG
-- File 50GB (target sau)
+### ❌ Chưa có
+| Gap | Ghi chú |
+|---|---|
+| `copyClips` / `pasteClips` | Clipboard chưa implement |
+| `selectAll` / `deselectAll` | Chỉ có `clearSelection` |
+| `setProjectDuration` | Duration tự tính từ clip cuối, không set tay được |
+| Auto-relink caption khi clip di chuyển | `relinkCaptionsToAudio` tồn tại nhưng phải gọi thủ công |
 
 ---
 
-## Roadmap Phase
+## 3. Engine Render (Compositor)
 
-### Phase 0 — Pre-launch (Done ✅)
-Engine chạy, export được, caption viral live.
+### Test cases ✅ pass được
+- 1 video clip + transform keyframe (scale/position/rotation/opacity) → render đúng
+- Text clip với font/size/color/weight/letterSpacing/stroke/gradient/shadow/glow → đúng
+- Shape clip (rect/ellipse/background) với fill + stroke → đúng
+- Per-glyph stagger reveal (staggerReveal, glyphBlurIn, glyphSpringUp) → đúng
+- Overlay (caption/super/disclaimer) timed text → đúng
+- Speed constant (0.25x → 4x) → render đúng cả export lẫn preview
+- Speed ramp (speedKeys) → **render và export đúng** (dùng Simpson rule integration)
+- Effect stack (bloom, film grain, chromatic aberration, vignette, color correct, light leak, lens distortion) → đúng
+- Constraint "Pin to" clip khác → đúng per-frame
+- Hidden/disabled clip → bị skip đúng
 
-### Phase 1 — Launch MVP (Current 🔄)
-Hoàn thiện UX: onboarding, MCP scaffold, audio FX, transitions. Target: **creator tự dùng được mà không cần hỏi**.
+### ⚠️ Edge cases chưa xử lý
+- **zoomBlur**: Dùng uniform blur thay vì radial zoom blur thật → blur không đúng hướng khi camera zoom
+- **lensDistortion**: Sampling ngoài biên = black → clip viền thay vì wrap/extend
+- **colorCorrect `liftBlacks`**: Map về `brightness(1 + v)` — approximate, không phải DaVinci-style lift curve
+- **Effect params**: Tất cả effects **static** — không keyframe được (không thể animate `bloom.intensity` over time)
 
-**Deliverables:**
-- [ ] Onboarding flow (interactive, ≤ 3 phút)
-- [ ] Transitions UI hoàn thiện
-- [ ] Audio FX UI (EQ, volume automation)
-- [ ] MCP server thật (1-2 tools hoạt động)
-- [ ] Cloud save/share link
-
-### Phase 2 — Performance + Scale (v2)
-WebGPU zero-copy, OPFS large file, Semantic Anchor DAG. **Đây là lúc Whip bắt đầu thực sự khác Adobe.**
-
-**Deliverables:**
-- [ ] WebGPU renderer thay PixiJS
-- [ ] OPFS proxy workflow (file 50GB)
-- [ ] SQLite semantic index
-- [ ] Semantic anchor: phoneme + relative_time
-- [ ] Beat map extraction (local DSP)
-- [ ] MCP server đầy đủ (10+ tools)
-- [ ] Agent demo: "edit 1-click theo style này"
-
-### Phase 3 — Collaboration + Platform (v3)
-Yjs CRDT, WebTransport, multi-user. **Đây là lúc pitch Series A.**
-
-**Deliverables:**
-- [ ] Yjs CRDT local-first state
-- [ ] WebTransport sync (collab)
-- [ ] Multi-user editing
-- [ ] Semantic keyword anchor
-- [ ] Creator style learning (AI learns your patterns)
-- [ ] Plugin/extension API
+### ❌ Chưa có
+| Gap | Impact |
+|---|---|
+| Blend modes per-clip (multiply, screen, overlay...) | Motion graphic cơ bản |
+| Shadow/drop-shadow per-clip (không phải chỉ text) | Layering |
+| Effect keyframing (animate param theo thời gian) | Dynamic look |
+| Motion blur | Fast motion strobing |
+| Nested composition (pre-comp) | Complex scene management |
+| Real-time effect preview khi kéo slider | UX — hiện phải scrub để thấy |
 
 ---
 
-## Token Economics
+## 4. Keyframe & Graph Editor
 
-| Thứ | Free | Pro ($XX/tháng) |
-|---|---|---|
-| Export resolution | 1080p | 4K |
-| Watermark | Có | Không |
-| Auto-caption phút/tháng | 30 phút | Unlimited |
-| Storage | Local only | Cloud sync 10GB |
-| Export batch | 1 | 10 |
-| Agent MCP | ❌ | ✅ |
+### ✅ Hoạt động tốt
+- 4 properties có keyframe: `scale` (number), `position` (vec2), `rotation` (number), `opacity` (number)
+- 8 easing presets + custom cubic-bezier (Newton-Raphson solver, frame-perfect)
+- Manual keyframe (`source="manual"`) không bị xóa khi behavior recompile
+- Compiled keyframe (`source="compiled:*"`) tự regenerate khi behavior thay đổi
+- Scale/opacity multiply với compiled, position/rotation additive — blend đúng
+
+### ⚠️ Partial
+- Timeline hiển thị diamond indicator cho manual keyframe → nhưng chỉ visual, không drag/edit được trên timeline
+- **Graph panel referenced trong store nhưng không có UI graph editor trong codebase** → đây là gap quan trọng
+
+### ❌ Chưa có — cần cho SOTA 2026
+| Gap | Impact |
+|---|---|
+| **Graph editor UI** (drag handle bezier curve) | P0 🔴 — không có cách edit curve ngoài preset |
+| Keyframe drag trên timeline | Phải xóa rồi add lại |
+| Copy/paste keyframe giữa clips | Workflow cơ bản |
+| Keyframe snap to beat | Creator sync motion với nhạc |
+| Trim-aware keyframe warning | Keyframe bị xóa âm thầm khi trim |
+| Audio automation keyframe UI | gain, EQ over time |
+| Properties thiếu keyframe: `lensDistortion.amount`, `bloom.intensity`, `grain.opacity`, clip-level effects | Dynamic look bắt buộc |
+
+---
+
+## 5. Audio System
+
+### ✅ Hoạt động tốt
+- AudioClock drift-resistant (dùng `AudioContext.currentTime`)
+- Playback tất cả audio clips với đúng in-point, speed constant, gain
+- `smartDucking`: Gain automation tự duck nhạc khi có voice clip
+- `autoCutSilence`: Detect silence → split clip tại boundary
+- Waveform render (peak cache) trong timeline
+- Export audio: OfflineAudioContext mix tất cả tracks + gain automation baked in
+- Mute per-clip và per-track
+
+### ⚠️ Gap quan trọng
+- **Speed ramp KHÔNG áp dụng cho audio** — audio playback dùng constant `clip.speed`. Video có thể ramp 0.5x→2x nhưng audio vẫn chạy thẳng. Export cũng vậy.
+- **Pan**: Tất cả clips mono-center, không có L/R pan
+
+### ❌ Chưa có
+| Gap | Impact |
+|---|---|
+| Audio pitch correction khi speed ramp | Creator slow-mo mà voice không bị pitch down |
+| EQ / compressor / limiter UI | Đã scaffold trong schema nhưng không có UI + WebAudio wiring |
+| Crossfade tự động giữa clips | Mọi NLE đều có |
+| Stereo pan per-clip | Mixing cơ bản |
+| Loudness metering (LUFS) | Chuẩn broadcast/platform |
+| Multi-track stems export | Chỉ có stereo mix |
+
+---
+
+## 6. Auto-Viral Caption
+
+### ✅ Hoạt động tốt
+- Deepgram API → word-level timestamps → CaptionBlock[] với `words[{w, start, end}]`
+- Chunk 360s để tránh 413 payload limit
+- localStorage cache per asset (tránh re-transcribe = tiết kiệm API cost)
+- Progress streaming callback (incremental update per chunk)
+- SmartLink: blocks tag `{srcAsset, srcIn, srcDur}` → survive clip move/trim
+- `relinkCaptionsToAudio()` recalc timeline offset từ source anchor
+- 4 style packs: loud, clean, cinematic, terminal
+- Demo fallback khi không có API key
+- Per-block style override (stored correctly trong schema)
+
+### ⚠️ Bug quan trọng
+- **Per-block style override KHÔNG được render** — compositor line 479 đọc `st.style` (track-level), không đọc `b.style` (block-level). User chỉnh từng block nhưng không thấy thay đổi → confusing UX
+- **Word-level highlight không tích hợp với caption blocks** — glyph presets chạy trên toàn text clip, không phải word-by-word trong caption block
+
+### ❌ Chưa có
+| Gap | Impact |
+|---|---|
+| Auto-relink khi clip move (phải gọi tay) | SmartLink không tự trigger |
+| Caption timing editor UI (graphical) | Chỉ có text edit start/end |
+| Speaker label / diarization | Interview với 2 người |
+| WebVTT / SRT export | Creator cần file phụ đề |
+| Bold/italic/color inline trong text | Highlight từ khóa |
+| Real-time transcription (streaming) | Không cần chờ full file |
+| Auto-translate | Kênh đa ngôn ngữ |
+
+---
+
+## 7. Smart Behaviors
+
+### ✅ 32+ behaviors hoạt động đầy đủ
+Chi tiết: zoomToRegion, smoothPunchIn, subtleDrift, springCrashZoom, pendulumSwing, kineticPop, hormoziPop, whipPan, handheldDrift, cameraShake, gawxJitter, maskRevealUp, elasticSmear, splitReveal, karaokeSlide, flipCascade, crossDissolve, dipToBlack, wipe, per-glyph stagger...
+
+Behavior overlap blending hoạt động (crossfade 0.3s).
+
+### ⚠️ Partial
+- **punchOnEmphasis**: Chỉ hoạt động khi `project.cues[]` có data. Nếu không có cue → behavior silently do nothing, không có warning
+- **Param edit real-time**: `setBehaviorParam` trong store hoạt động nhưng **không có UI slider/input** → user không tự adjust amount/duration/direction được
+
+### ❌ Chưa có
+| Gap | Impact |
+|---|---|
+| **Behavior parameter UI (sliders)** | P0 🔴 — không expose params ra UI |
+| Batch apply behavior to multi-clip | Phải apply từng clip một |
+| Transition preview on hover | UX |
+| Ease override per behavior | Hardcoded curves |
+| Audio behaviors (volume ramp, filter sweep) | Sound design |
+
+---
+
+## 8. Export
+
+### ✅ Hoạt động tốt
+- WebCodecs H.264 + AAC, mp4-muxer
+- Frame-accurate: `seekAndWait()` đảm bảo đúng frame trước khi encode
+- Audio mix: OfflineAudioContext, gain automation baked in
+- Watermark free tier, resolution scale (0.5x, 1x)
+- Render range (in/out points)
+- Progress callback 0→1
+
+### ⚠️ Edge cases
+- AAC only — không có fallback nếu browser không support
+- Cực kỳ lớn (4K + >10 phút) có thể hang vì không có memory management
+
+### ❌ Chưa có
+| Gap | Impact |
+|---|---|
+| Speed ramp audio trong export | Audio không match video ramp |
+| ProRes / transparent alpha | Agency workflow |
+| GIF / WebP animation | Social posts |
+| Batch export (multiple range) | Reels từ 1 video dài |
+| 2-pass encoding | Quality vs size |
+
+---
+
+## 9. MVP Launch Checklist
+
+### P0 — Fix trước launch (blocking)
+- [ ] **Cmd+Z / Cmd+Shift+Z**: Bind undo/redo keyboard shortcut — store có sẵn, chỉ cần wire
+- [ ] **Per-block caption style render**: Fix compositor line 479 đọc `b.style` thay vì chỉ `st.style`
+- [ ] **Right-click context menu**: Cut, Copy, Paste, Delete, Disable
+- [ ] **Drag source từ MediaPool tự tạo track**: Không force user tạo track trước
+
+### P1 — Hoàn thiện UX trước public
+- [ ] Behavior parameter sliders UI
+- [ ] Graph editor (bezier curve UI) hoặc ít nhất kéo keyframe trên timeline
+- [ ] Ripple trim (không chỉ ripple cut)
+- [ ] Multi-clip trim
+- [ ] Snap to beat toggle
+- [ ] Auto-relink caption khi clip move
+- [ ] Caption timing editor UI
+
+### P2 — Post-launch polish
+- [ ] Marker display trên ruler
+- [ ] Audio EQ/compressor UI
+- [ ] Effect keyframing
+- [ ] Copy/paste clip
+- [ ] Crossfade auto
+- [ ] Transition hover preview
+
+---
+
+## So sánh với SOTA 2026
+
+| Feature | CapCut | DaVinci Lite | **Whip hiện tại** | Whip target |
+|---|---|---|---|---|
+| Keyframe animation | Basic | ✅ Full | ✅ Full (no graph UI) | ✅ + graph editor |
+| Caption word-level | ✅ | ❌ | ✅ SmartLink | ✅ + phoneme anchor |
+| Behaviors/auto-animate | Preset only | ❌ | ✅ 32+ compiled | ✅ + param UI |
+| Speed ramp audio | ❌ | ✅ | ⚠️ video only | ✅ |
+| Effect keyframing | ❌ | ✅ | ❌ | ✅ |
+| Graph editor | ❌ | ✅ | ❌ | ✅ |
+| AI agent API | ❌ | ❌ | 🔄 scaffold | ✅ MCP full |
+| Semantic anchor | ❌ | ❌ | ❌ | ✅ v2 |
+| WebGPU | ❌ | ❌ | ❌ | ✅ v2 |

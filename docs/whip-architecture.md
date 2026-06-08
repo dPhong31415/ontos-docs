@@ -236,24 +236,36 @@ WebTransport
 
 ## 7. AI Layer — Local vs Cloud
 
-### Local AI (trình duyệt, không tốn tiền API)
+### Hiện tại (v1)
 
-| Model | Dùng cho | Chạy ở đâu |
+| Tác vụ | Cách làm hiện tại | Ghi chú |
 |---|---|---|
-| Whisper (tiny/base) | Transcription → phoneme map | WebGPU Worker |
-| Vision model nhỏ | Scene type, energy, emotion | WebGPU Worker |
-| Beat detection | BPM, beat timestamps | Web Worker (DSP) |
+| Transcription (caption) | Deepgram API — audio file gửi lên cloud | ✅ hoạt động, video không gửi — chỉ audio |
+| Semantic scene analysis | TwelveLabs API — **video upload** | ⚠️ Sẽ bị replace — video rời máy, chậm, tốn tiền |
+| Beat detection | Chưa có | ❌ |
+| Vision / scene type | Chưa có | ❌ |
 
-### Cloud AI (khi cần phân tích nặng)
+### Roadmap v2 — Local-first AI (video không rời máy)
 
-| Model | Dùng cho | Gọi khi |
+| Model | Dùng cho | Chạy ở đâu | Status |
+|---|---|---|---|
+| Whisper tiny/base (ONNX) | Transcription local không cần API | WebGPU Worker | ❌ roadmap |
+| Vision model nhỏ (MobileNet/EfficientNet) | Scene type, energy per-frame | WebGPU Worker | ❌ roadmap |
+| Beat detection (DSP) | BPM, beat timestamps từ audio | Web Worker | ❌ roadmap |
+| Frame sampler | 5-10 frames → gửi lên vision LLM | Local sampling, cloud inference | 🔄 planned |
+
+### Cloud AI — Chỉ inference nhẹ, không upload video
+
+**Nguyên tắc quan trọng:** Cloud AI chỉ nhận **frames** (ảnh tĩnh) hoặc **text** — **không bao giờ nhận video file**. Video luôn ở máy user.
+
+| Model | Input gửi lên | Dùng cho |
 |---|---|---|
-| Gemini 2.0 Flash | Semantic scene description | Clip mới thêm vào |
-| Claude Sonnet | Cut optimization, reasoning | Khi user thay đổi lớn |
-| Whisper large-v3 | Transcription chất lượng cao | User yêu cầu |
-| GPU model (Modal) | Stem separation cho nhạc | Export + beat match |
+| Gemini 2.0 Flash | 5-10 frames (ảnh JPG nhỏ) + transcript | Semantic scene description, chapters |
+| Claude Sonnet | Text only (transcript + metadata) | Cut optimization, reasoning |
+| Whisper large-v3 (API) | Audio file (không phải video) | Transcription chất lượng cao |
+| Modal GPU | Audio only | Stem separation (tách nhạc/vocal) |
 
-**Nguyên tắc:** Chạy local trước → cloud chỉ khi local không đủ. Giảm tối đa API cost.
+**Nguyên tắc:** Local trước → cloud chỉ nhận frames/text, không nhận video → API cost thấp.
 
 ---
 

@@ -114,7 +114,7 @@ sidebar_position: 6
 
 **Thời gian:** 3–5 ngày làm việc nếu hồ sơ đầy đủ.
 
-**Vốn điều lệ:** Không có yêu cầu tối thiểu. Thực tế thường đăng ký 500 triệu – 1 tỷ VNĐ để tạo uy tín (không cần nộp thật, chỉ cam kết góp trong 90 ngày).
+**Vốn điều lệ:** Không có yêu cầu tối thiểu theo Luật DN 2020. Nếu đang 0đ thì đăng ký **10 triệu VNĐ** là đủ hợp lệ — không ai kiểm tra, không cần nộp tiền vào đâu cả, chỉ cam kết góp trong 90 ngày. Đăng ký 500M–1B chỉ phù hợp khi đã có revenue và muốn tạo uy tín với đối tác lớn — giai đoạn đầu không cần.
 
 ---
 

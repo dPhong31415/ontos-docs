@@ -265,34 +265,74 @@ sidebar_position: 4
 
 ---
 
-## F8 — TwelveLabs Semantic Analysis 🔄
+## F8 — Semantic Analysis (Video Understanding) ⚠️ Đang rethink
 
-**Là gì:** Gửi video lên TwelveLabs (video AI) để phân tích semantic: chapters, scene types, keywords, timestamps quan trọng.
+**Là gì:** Phân tích nội dung video để hiểu "đoạn này nói về gì, ai đang nói, cảm xúc gì" — tạo ra Regions/Anchors semantic thay vì chỉ có timestamps.
 
-**Tại sao quan trọng:** Đây là bước đầu tiên để có **Semantic Temporal Graph** — AI hiểu "đoạn này nói về gì" thay vì chỉ biết "frame 450 tại giây 15".
+**Tại sao quan trọng:** Đây là bước đầu tiên để có **Semantic Temporal Graph** — core moat của Whip.
 
-**Luồng logic:**
+---
+
+### ⚠️ Vấn đề với TwelveLabs (implementation hiện tại)
+
+Whip hiện có `engine/twelvelabs.ts` gọi TwelveLabs API — nhưng cách này **mâu thuẫn trực tiếp** với kiến trúc local-first:
 
 ```
-1. User click "Analyze Video" trong Content View
+TwelveLabs flow:
+  Video (50GB từ máy user) → UPLOAD lên server TwelveLabs → xử lý 1-5 phút → trả về chapters
 
-2. TwelveLabs.analyzeVideo(assetUrl):
-   a. Gọi /api/tl proxy (avoid CORS, giữ API key server-side)
-   b. Tạo TwelveLabs index (1 lần per project)
-   c. Upload video → tạo task
-   d. Poll until status = "ready" (1-5 phút)
-   e. Gọi summarize(type="chapter") → chapters[]
-
-3. Chapters được convert thành Regions:
-   { id, label, start, end, source: "twelvelabs" }
-
-4. User có thể bind Behavior vào Region:
-   "Zoom in khi AI detect chapter về sản phẩm"
-
-5. Future: region được convert thành semantic anchor trong DAG
+Vấn đề:
+  ✗ Video rời máy user (privacy)
+  ✗ Upload 50GB = không thực tế
+  ✗ 1-5 phút chờ = UX tệ
+  ✗ CORS issues từ browser → cần proxy
+  ✗ Cost per-video không scale
 ```
 
-**Lưu ý kỹ thuật:** TwelveLabs indexing là async (vài phút) và có thể bị CORS từ browser → cần chạy qua proxy hoặc server-side. Đây là lý do feature này là 🔄 (scaffold, chưa hoàn thiện UX).
+**Kết luận:** TwelveLabs sẽ bị **replace hoàn toàn** bằng approach dưới đây.
+
+---
+
+### ✅ SOTA 2026 — Frame Sampling + Local/LLM Vision
+
+Thay vì upload toàn bộ video, chỉ cần **sample một số frames** (ảnh tĩnh) và gửi lên vision API. Video không rời máy.
+
+**Luồng logic đúng:**
+
+```
+1. User click "Analyze" trong Content View
+
+2. Frame Sampler (local, Web Worker):
+   a. WebCodecs decode video tại các mốc 10%, 25%, 50%, 75%, 90%
+   b. Trả về 5-10 ImageBitmap (ảnh nhẹ, không phải video)
+
+3. Audio Transcription (local):
+   a. Whisper tiny chạy WebGPU (local, không upload)
+   b. → words[] với timestamps → full transcript
+
+4. Vision Analysis (gửi frame, không gửi video):
+   POST /api/analyze với:
+   { frames: [base64_jpg × 5], transcript: "..." }
+
+   Server gọi Gemini 2.0 Flash hoặc Claude với:
+   "Đây là 5 frames và transcript. Xác định: scenes, topics, emotional arc, key moments"
+   → chapters[], scene_types[], keywords[]
+
+5. Kết quả về client:
+   Regions: [{ id, label: "Giới thiệu sản phẩm", start: 0, end: 8.5, source: "vision" }]
+   → User bind Behavior vào Region
+   → Future: convert sang semantic anchor trong DAG
+```
+
+**Tại sao tốt hơn TwelveLabs:**
+- Video không rời máy (chỉ 5 ảnh nhỏ được gửi)
+- Response trong 3-5 giây thay vì 1-5 phút
+- Cost thấp hơn nhiều (5 ảnh vs toàn bộ video)
+- Không cần specialized vendor — dùng Gemini/Claude sẵn có
+
+**Trade-off:** Kém accurate hơn TwelveLabs cho phân tích temporal chi tiết (TwelveLabs xem toàn bộ video). Nhưng đủ cho use case của Whip (tìm chapters, detect scene type).
+
+**Khi nào cần TwelveLabs-level accuracy:** Chỉ khi có features như "tìm tất cả khoảnh khắc user cười" hay "detect object trong video" — những thứ cần full temporal understanding. Ở giai đoạn MVP, frame sampling là đủ.
 
 ---
 
