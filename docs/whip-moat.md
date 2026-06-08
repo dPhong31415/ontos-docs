@@ -45,7 +45,9 @@ Khi một phần tử thay đổi, hệ thống tự lan truyền ảnh hưởng
 - **CapCut không có động cơ** — họ target người dùng casual, không cần graph phức tạp
 - **Whip xây từ ngày 1** theo kiến trúc này — không có technical debt
 
-→ Roadmap đầy đủ: [F10 — Semantic Anchor DAG](./whip-features) (v2) · [SmartLink v1 (F4)](./whip-features)
+:::info Xem thêm
+[F10 — Semantic Anchor DAG (v2)](./whip-features) · [F4 — SmartLink v1 (live)](./whip-features)
+:::
 
 ---
 
@@ -105,7 +107,9 @@ AI Agent gọi:  split_clip("clip_001", at=5.0)
 - **CapCut** không có MCP server → AI chỉ preset, không customizable
 - **Whip MCP** là standard mở → developer third-party có thể build agent cho Whip
 
-→ Tool surface đầy đủ + workflow examples: [MCP & Agent Skills](./whip-mcp) · [Command API](./whip-api)
+:::info Xem thêm
+[MCP & Agent Skills](./whip-mcp) — tool surface đầy đủ + workflow examples · [Command API](./whip-api)
+:::
 
 ---
 
