@@ -77,6 +77,7 @@ const sidebars: SidebarsConfig = {
               items: [
                 { type: "doc", id: "whip-architecture", label: "🏗 Kiến trúc SOTA 2026" },
                 { type: "doc", id: "whip-data-model",   label: "🗄 Project Document & Schema" },
+                { type: "doc", id: "whip-properties",   label: "📐 Properties Reference" },
                 { type: "doc", id: "whip-api",          label: "🔌 Command API" },
                 { type: "doc", id: "whip-mcp",          label: "🤖 MCP & Agent Skills" },
               ],
