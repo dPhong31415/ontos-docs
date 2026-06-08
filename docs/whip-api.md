@@ -53,7 +53,29 @@ action (export 4K, AI job) qua Ontos, xem [Kiến trúc](./whip-architecture).
 ## Command primitives
 
 ```ts
-// ── timeline ──
+// ── "Whip It" editorial pipeline (F11) ──────────────────────────────────
+whipIt({ recipe?: RecipeId | { refVideoId: string } })
+  // Trigger full AI editorial pipeline:
+  // transcript → LLM Art Director → CompositionBrief → asset gen → overlay → animate
+  // recipe: "iman_editorial" | "hormozi_bold" | "ali_clean" | "mrbeast_energy" | "gawx_cinematic"
+
+setStyleProfile({ recipeId: RecipeId } | { refVideoId: string })
+  // Extract StyleProfile từ reference video hoặc set từ recipe
+  // StyleProfile dùng trong whipIt và mọi asset generation
+
+generateAsset({ description: string, style?: StyleRef, type: "raster" | "vector" })
+  // Seedream 5.0 / Recraft → image asset + auto bg removal nếu raster → trả assetId
+
+removeBackground(assetId: string)
+  // RMBG local WebGPU → transparent PNG → trả assetId mới
+
+segmentObject(clipId: string, { x: number, y: number, frameT?: number })
+  // SAM2 magic mask: click vào object → segment → track qua clip → trả maskId
+
+applyComposition(compositionJson: CompositionBrief)
+  // Apply CompositionBrief JSON vào timeline: tạo overlays, bind behaviors, set animations
+
+// ── timeline ──────────────────────────────────────────────────────────
 addClip(track, asset, { start, in?, end? })
 splitClip(clipId, t)
 trimClip(clipId, { start?, end?, in? })
@@ -61,42 +83,43 @@ moveClip(clipId, track, start)
 rippleDelete(clipId)                       // xóa + dồn gap
 duplicateClip(clipId)
 
-// ── smart animation (tầng chính — xem whip-behaviors) ──
-bindRegion({ from, to } | { transcript: "..." })   // tạo region anchor (derive từ lời nói)
+// ── smart animation (tầng chính — xem whip-behaviors) ──────────────
+bindRegion({ from, to } | { transcript: "..." })   // tạo region anchor từ lời nói
 addCue({ t, kind })                        // cue điểm (emphasis…)
 addBehavior(target, type, { bind, params })// gắn behavior vào anchor → compiler sinh keyframe
 setBehaviorParam(behaviorId, key, value)
 removeBehavior(behaviorId)
-bakeBehavior(behaviorId)                    // đông cứng → keyframe tay (ngắt khỏi anchor)
+bakeBehavior(behaviorId)                    // đông cứng → keyframe tay (ngắt anchor)
 
-// ── transform / animate (low-level — thường là output, hoặc override) ──
-setKeyframe(clipId, prop, { t, v, ease })  // override 1 điểm / chỉnh tay
+// ── transform / animate (low-level — override khi cần) ──────────────
+setKeyframe(clipId, prop, { t, v, ease })
 removeKeyframe(clipId, prop, t)
-setEase(clipId, prop, t, ease)             // bezier handle (curve editor — khi cần)
-applyPreset(clipId, presetId, params)      // smoothZoomIn, whipPan… (preset = behavior cố định)
+setEase(clipId, prop, t, ease)
+applyPreset(clipId, presetId, params)      // smoothZoomIn, whipPan…
 
-// ── effects / transitions ──
+// ── effects / transitions ─────────────────────────────────────────
 addEffect(clipId, type, params)
 setEffectParam(clipId, effectId, key, value)
+setBlendMode(clipId, mode)                 // multiply | screen | overlay | add | normal
 addTransition(clipA, clipB, type, duration)
 
-// ── text ──
+// ── text ─────────────────────────────────────────────────────────
 addText(track, { text, start, end, preset })
 setText(clipId, { text?, font?, size?, color? })
 
-// ── speed ──
+// ── speed ─────────────────────────────────────────────────────────
 setSpeed(clipId, factor)                   // 0.5 = slow-mo; ramp = keyframe speed
 
-// ── audio ──
+// ── audio ─────────────────────────────────────────────────────────
 setGain(clipId, db)
-setGainAutomation(clipId, keyframes)       // ducking tay
-addAudioFx(clipId, { type: "eq"|"compressor"|"limiter", ...params })
-detachAudio(clipId)                        // tách audio khỏi video clip
+setGainAutomation(clipId, keyframes)
+addAudioFx(clipId, { type: "eq"|"compressor"|"limiter"|"noiseRemoval", ...params })
+detachAudio(clipId)
 
-// ── project ──
+// ── project ───────────────────────────────────────────────────────
 setCanvas({ resolution, aspect, fps })
 undo() / redo()
-render({ range?, out, preset })            // export — xem dưới
+render({ range?, out, preset })
 ```
 
 Mỗi command có một zod schema. Registry export ra **TS types** (autocomplete cho GUI) **và**

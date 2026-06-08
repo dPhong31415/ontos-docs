@@ -91,7 +91,39 @@ RAM client**, không phải Postgres. Lý do ở [Kiến trúc](./whip-architect
 
   "transitions": [
     { "id":"x1", "between":["c1","c2"], "type":"crossDissolve", "duration":0.5 }
+  ],
+
+  // ── F11 "Whip It" — editorial motion graphics ──────────────────────────
+  "styleProfile": {
+    "source": "recipe",                  // "recipe" | "extracted"
+    "recipeId": "iman_editorial",        // hoặc null nếu extracted từ video
+    "palette": ["#0a0a0a","#ffffff","#7c6af7"],
+    "motionStyle": "fast_cut",           // fast_cut | slow_burn | rhythmic | cinematic
+    "energy": "high",
+    "graphicDensity": "heavy"
+  },
+
+  "compositions": [
+    {
+      "id": "comp_001",
+      "t": 0, "duration": 3.0,
+      "type": "stat_reveal",
+      "data": { "value": "$10M", "label": "in 12 months" },
+      "style": "hormozi_impact",
+      "animation": { "in": "text_slam", "ease": "expo_out" },
+      "beatSync": true
+    },
+    {
+      "id": "comp_002",
+      "t": 18.5, "duration": 5.0,
+      "type": "section_card",
+      "data": { "title": "Sai lầm #1", "subtitle": "Mà 90% founder mắc phải" },
+      "style": "iman_editorial",
+      "animation": { "in": "slide_up", "out": "cut" }
+    }
   ]
+  // compositions[] được gen bởi whipIt() hoặc agent gọi applyComposition()
+  // Pixi renderer đọc compositions[] và render frame-perfect theo timeline
 }
 ```
 
@@ -148,6 +180,20 @@ Trim clip → recompile → animation tự dời. Chi tiết: [Smart Animation](
 
 CapCut-fast = "apply `smoothZoomIn(amount=1.12, dur=0.6)` vào clip c1" — **một command**.
 Đây là cơ chế biến "keyframe tay đau" thành "một dòng". Danh sách preset ở [Tính năng](./whip-features.md).
+
+---
+
+## Blend mode — schema có, renderer đang implement
+
+`clip.blend` đã có trong schema (`"blend": "normal"`). Các mode mục tiêu:
+
+```ts
+type BlendMode = "normal" | "multiply" | "screen" | "overlay" | "add" | "soft_light" | "hard_light"
+```
+
+- **Hiện tại**: chỉ `"normal"` được render — các mode khác bị ignore (P0 blocker)
+- **V1 target**: PixiJS hỗ trợ đầy đủ blend mode — chỉ cần wire vào compositor per-clip
+- **Tại sao quan trọng**: mọi overlay/composite (light leak, broll trên talking head, graphic layer) đều cần blend mode
 
 ---
 

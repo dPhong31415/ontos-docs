@@ -78,11 +78,28 @@ event "nhìn vào graph" [8–12s]   ───▶ region r3 [8–12s]
 
 ---
 
+## Kết nối với "Whip It" (F11)
+
+Content View là **entry point cho "Whip It"** — nút `✨ Whip It` nằm ngay đây:
+
+```
+┌─ 📑 CONTENT ────────────────────────────── [✨ Whip It]  [Caption] ─┐
+│ 01  0.0–4.0s   "Hôm nay mình nói về…"   → hook_graphic suggested   │
+│ 02  4.0–18s    "Điểm thứ nhất là…"       → talking_head            │
+│ 03  18–24s     "Nhìn vào con số này"     → stat_reveal suggested    │
+│ 04  24–30s     "Tóm lại…"               → section_card suggested   │
+└─────────────────────────────────────────────────────────────────────┘
+```
+
+Khi AI analyze xong, Content View hiển thị **gợi ý graphic** cho từng event — user click Accept/Reject từng cái, hoặc bấm `✨ Whip It` để accept all và chạy full pipeline tự động.
+
+---
+
 ## Vì sao đây là tương lai của editing
 
 - **AI-native**: agent làm việc ở tầng content (đọc được), không rải keyframe (xem [MCP](./whip-mcp.md)).
-- **Sửa nội dung không vỡ**: animation/super bám event, không bám giây cứng.
-- **Nhanh**: "đoạn này zoom, đoạn kia caption" — vài thao tác content thay vì trăm keyframe.
+- **Sửa nội dung không vỡ**: animation/super/graphic bám event, không bám giây cứng.
+- **Nhanh**: "đoạn này stat reveal, đoạn kia section card" — vài thao tác content thay vì trăm keyframe.
 
 > **Một câu:** Content View biến editor từ *"sắp xếp clip/keyframe"* thành *"đạo diễn nội dung"* —
 > bạn nói *cái gì* xảy ra ở *đoạn nào*, Whip lo *làm thế nào*.
@@ -91,6 +108,8 @@ event "nhìn vào graph" [8–12s]   ───▶ region r3 [8–12s]
 
 ## Trạng thái (06/2026)
 
-🩻 **Scaffold** trong app: `components/ContentView.tsx` — list clip làm event theo thời gian, span bar,
-nút AI-analyze / Caption (stub). TODO v1: event từ transcript (Whisper), text-span thật, gắn behavior
-từ event, edit nội dung event.
+- 🩻 **Scaffold**: `components/ContentView.tsx` — list clip theo thời gian, span bar, nút AI-analyze / Caption (stub)
+- ❌ **Chưa có**: event từ transcript (Whisper), text-span thật, gắn behavior từ event
+- ❌ **Chưa có**: graphic suggestion per-event (kết nối với F11 Whip It)
+- ❌ **Chưa có**: "Whip It" button trigger → full pipeline
+- → **V1 target**: Content View là UI chính để review + approve "Whip It" output

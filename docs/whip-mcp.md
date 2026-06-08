@@ -58,20 +58,45 @@ whip.get_project()                  → project.whip hiện tại (agent "nhìn"
 whip.get_timeline_summary()         → tóm tắt token-nhẹ: clip, cut, duration, gaps
 whip.get_transcript(clipId)         → transcript + timestamp (sau autoCaptions)
 
-# smart animation (tầng chính agent dùng — bind motion vào nội dung)
+# ── "Whip It" editorial pipeline (F11) ──────────────────────────────────
+whip.whip_it({ recipe? })
+  → trigger full AI editorial: phân tích transcript → CompositionBrief → asset gen → overlay → animate
+  → recipe: "iman_editorial" | "hormozi_bold" | "ali_clean" | "mrbeast_energy" | "gawx_cinematic"
+  → nếu không có recipe → dùng StyleProfile đã set (hoặc auto-detect từ project)
+
+whip.set_style_profile({ recipeId } | { refVideoId })
+  → set StyleProfile cho project: extract từ reference video hoặc chọn recipe
+  → dùng cho whip_it và mọi asset generation sau đó
+
+whip.generate_asset({ description, style?, type: "raster"|"vector" })
+  → gọi Seedream 5.0 / Recraft → trả assetId (với transparent background nếu raster)
+  → type "raster": RMBG background removal tự động sau gen
+  → type "vector": Recraft SVG, import trực tiếp
+
+whip.remove_background(assetId)
+  → chạy RMBG local WebGPU trên asset → trả assetId mới với transparent bg
+
+whip.magic_mask(clipId, { x, y, frameT? })
+  → SAM2 segment object tại điểm (x,y) trong frame
+  → trả maskId: dùng để pin overlay, replace bg, track object
+
+whip.apply_composition(compositionJson)
+  → apply CompositionBrief JSON vào timeline: tạo overlays, set animations, sync behaviors
+
+# ── smart animation (tầng chính agent dùng — bind motion vào nội dung) ──
 whip.bind_region / add_cue / add_behavior / set_behavior_param / bake_behavior
 
-# mutate low-level (= Command API, mỗi command 1 tool)
+# ── mutate low-level (= Command API, mỗi command 1 tool) ──────────────
 whip.add_clip / split_clip / trim_clip / move_clip / ripple_delete
 whip.set_keyframe / apply_preset / set_ease     # override khi cần tay
 whip.add_effect / add_transition / add_text / set_speed
 whip.set_gain / set_gain_automation / add_audio_fx
 
-# skill cấp cao (compose anchors + behaviors — xem dưới)
+# ── skill cấp cao (compose anchors + behaviors) ───────────────────────
 whip.auto_zoom_on_mention / auto_punch_in / auto_sequence_graphics
 whip.auto_cut_on_silence / beat_sync / auto_captions / auto_reframe / auto_duck
 
-# xuất
+# ── xuất ──────────────────────────────────────────────────────────────
 whip.render({ range?, out, preset })
 ```
 
@@ -91,7 +116,7 @@ compiler lo keyframe. Agent làm việc ở tầng *ý nghĩa*:
 |---|---|---|
 | `autoZoomOnMention` | nhắc tới gì → zoom in, nói xong → zoom out | transcript match → `bindRegion` + `addBehavior(zoomToRegion)` |
 | `autoCutOnSilence` | cắt khoảng lặng, dồn pacing | VAD / transcript → `splitClip` + `rippleDelete` |
-| `autoPunchIn` | punch vào mỗi điểm nhấn (look Abi Abdallah) | emphasis cue → `addBehavior(punchOnEmphasis)` |
+| `autoPunchIn` | punch vào mỗi điểm nhấn (look Ali Abdaal) | emphasis cue → `addBehavior(punchOnEmphasis)` |
 | `autoSequenceGraphics` | map graphic 1-2-3 theo đoạn nói | region → `addBehavior(sequenceReveal)` |
 | `beatSync` | snap cut/zoom vào beat | beat anchor → `addBehavior(beatPulse)` |
 | `autoCaptions` | caption word-by-word | Whisper → `addText` + cue mỗi chữ |

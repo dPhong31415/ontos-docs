@@ -208,6 +208,29 @@ span, kéo được, gắn vào [Content View](./whip-content-view.md) event.
 
 ---
 
+## Kết nối với "Whip It" (F11)
+
+Behaviors là nền tảng mà F11 "Whip It" pipeline build trên:
+
+```
+"Whip It" trigger
+    │
+    ├── LLM Art Director → CompositionBrief
+    │        (xác định đoạn nào cần graphic, loại gì)
+    │
+    ├── Asset generation (Seedream + RMBG)
+    │        (tạo visual assets)
+    │
+    └── Gắn behaviors vào assets: ←── ĐÂY LÀ CHỖ BEHAVIORS VÀO
+              sequenceReveal([g1, g2, g3], bind=r_explain)
+              beatPulse(overlay_001, bind=beat_grid)
+              punchOnEmphasis(section_card, bind=cue_emphasis)
+```
+
+Behaviors đảm bảo graphic **tự dời theo content** khi user cắt/chỉnh lại lời nói — không phải đặt keyframe thủ công cho từng asset. Đây là lý do F11 không thể build mà thiếu behavior system.
+
+---
+
 ## Vì sao điều này hợp với agent
 
 Agent **không rải keyframe** (dễ sai, khó review). Agent làm việc ở tầng **ý nghĩa**:

@@ -12,12 +12,13 @@ sidebar_position: 12
 
 ---
 
-## 0. Hướng đã CHỐT (07/06/2026) — đọc trước
+## 0. Hướng đã CHỐT (09/06/2026) — đọc trước
 
-- **Positioning: NHỌN vào talking-head viral.** Bán = *"làm reel talking-head kiểu Gadzhi/Ali — text động + auto zoom, web, 5 phút"*. Shapes / graph editor / keyframe / MCP là **moat ẩn** (chiều sâu), **KHÔNG** lên ad. Không pitch "browser AE".
-- **Monetize: LIFETIME $59 TRƯỚC** (100 suất đầu, sau $99) → tiền mặt ngay, 0 backend, validate willingness-to-pay. Subscription $8.99/mo bật **sau** khi có ~50 khách.
-- **Việc chặn tiền đầu tiên = ống bán hàng, KHÔNG phải feature.** Feature đã thừa. Cần: deploy + Gumroad/LS + legal host + 1 demo video + landing. → **đóng băng feature, dồn vào launch.**
-- Asset đã dựng: `whip/landing/index.html` (landing 1 trang, talking-head + Lifetime $59) · `whip/landing/DEMO-SCRIPT.md` (script demo 45–60s, dùng nút ✨ Demo làm hero).
+- **Positioning: NHỌN vào talking-head viral.** Bán = *"làm reel talking-head kiểu Gadzhi/Ali Abdaal — text động + auto zoom + background removal, web, 5 phút"*. Graph editor / MCP / Semantic DAG là **moat ẩn** (chiều sâu), **KHÔNG** lên ad. Không pitch "browser AE".
+- **Monetize: LIFETIME $59 TRƯỚC** (100 suất đầu, sau $99) → tiền mặt ngay, 0 backend, validate willingness-to-pay. Subscription $8.99/mo (caption credits) bật **sau** khi có ~50 khách.
+- **Thanh toán: Lemon Squeezy (MoR) — không dùng Lemon Squeezy.** LS lo thuế VAT toàn cầu, subscription chuẩn SaaS. Chi tiết ở [Launch & Infra](./whip-launch-infra.md).
+- **V1 còn việc phải làm trước launch:** blend modes (P0 blocker), background removal, "Whip It" pipeline, image gen, graph editor UI. Xem [MVP Status](./whip-mvp-scope.md) P0/P1. → **Tập trung hoàn thành P0 trước, sau đó launch.**
+- Asset đã dựng: `whip/landing/index.html` (landing 1 trang) · `whip/landing/DEMO-SCRIPT.md` (demo 45–60s, dùng nút ✨ Demo).
 
 ---
 
@@ -54,7 +55,7 @@ Không phải "another editor", cũng KHÔNG bán là "browser AE". Nhọn vào 
 | Pro Lifetime (sau 100) | $99 một lần | như trên |
 | Pro Subscription (v2) | $8.99/mo | bật **sau** khi có ~50 khách + cloud sync |
 
-**Vì sao Lifetime trước:** solo dev cần cash sớm, từ 0 audience subscription ra tiền chậm. Lifetime = tiền mặt ngay, 0 backend (chỉ cần Gumroad), validate giá nhanh. Subscription để dành cho lúc có traffic + feature cloud.
+**Vì sao Lifetime trước:** solo dev cần cash sớm, từ 0 audience subscription ra tiền chậm. Lifetime = tiền mặt ngay, 0 backend (chỉ cần Lemon Squeezy), validate giá nhanh. Subscription để dành cho lúc có traffic + feature cloud.
 
 **The Hook:** *"Lifetime $59 cho 100 người đầu — pay once, own forever, kể cả khi có AI auto-edit. Sau đó lên $99 rồi chuyển sang thuê bao. Khóa ngay."* → FOMO + anchor $99.
 

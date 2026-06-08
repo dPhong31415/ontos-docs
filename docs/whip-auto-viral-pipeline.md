@@ -23,12 +23,20 @@ sidebar_position: 13
 
 | Sản phẩm | COGS | Mô hình | Vai trò |
 |---|---|---|---|
-| **Whip Editor** (client-only: cut, preset, shape, text, export) | $0 | **Lifetime $59** | Funnel, validate, cash ngay |
+| **Whip Editor** (client-only: cut, preset, shape, text, export) | $0 | **Lifetime $59** (100 suất → $99) | Funnel, validate, cash ngay |
 | **Auto-Viral Caption** (AI: transcribe + chunk + style) | ~$0.06/video | **Credits / Subscription** | Recurring revenue + margin |
 
-**Pricing credits gợi ý:** Free 3 video/tháng (hook) · Creator $12/mo = 50 video · Pro $29/mo = 200 video. Margin ~95% (COGS $0.06, bán ~$0.24/video). → đây mới là **MRR thật**, không phải editor.
+**Pricing credits (đồng bộ với [Launch & Infra](./whip-launch-infra.md)):**
 
-→ Editor lifetime = mồi. Caption credits = máy in tiền. Hai cái bổ trợ, không mâu thuẫn.
+| Tier | Giá | Caption credits/tháng | Ghi chú |
+|---|---|---|---|
+| **Free** | $0 | 3 video | Hook — thấy wow moment, muốn thêm |
+| **Pro** | $8.99/mo | 50 video | Target: daily creator |
+| **Studio** | $29/mo | 200 video | Agency / high-volume |
+
+Margin ~95% (COGS $0.06/video, bán ~$0.18-0.24/video). → Caption credits là **MRR thật**. Editor lifetime là mồi vào funnel.
+
+→ Editor lifetime = cash ngay + validate. Caption credits = máy in tiền. Hai cái bổ trợ, không mâu thuẫn.
 
 ---
 

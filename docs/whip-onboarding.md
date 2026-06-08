@@ -21,15 +21,16 @@ Map cho Whip — 6 card = 6 bước workflow:
 | Card | Nhãn | Infographic |
 |---|---|---|
 | 1 | **Import** | clip kéo vào |
-| 2 | **Cut** | kéo cắt timeline |
-| 3 | **Animate** | keyframe + zoom |
-| 4 | **Caption** | chữ viral word-by-word |
-| 5 | **Effects** | glow/glitch |
-| 6 | **Export** | file mp4 ra |
+| 2 | **Caption** | chữ viral word-by-word ← killer feature |
+| 3 | **Whip It** | 1 nút → AI editorial ← WOW moment #2 |
+| 4 | **Animate** | zoom punch tự động theo lời nói |
+| 5 | **Effects** | glow / glitch / cinematic |
+| 6 | **Export** | file mp4 local, không upload |
 
-- Hero: *"The fastest way to make viral talking-head reels."* + nút **Get Started** → `/app` (Clerk sign-in).
-- Metric thật khi có: số video tạo, team, export.
-- Tech: giữ `landing/index.html` static (đã dựng), thêm 6 card + isometric SVG line-art (đặt `landing/icons/*.svg`). Có thể nâng lên Next.js sau nếu cần blog/SEO.
+- Hero: *"Boring talking-head → editorial reel trong 5 phút. Không cần AE. Không cần design skill."* + nút **Try free** → `/app` (Clerk sign-in).
+- Sub-hero: *"Auto-caption • Auto punch-in zoom • Whip It AI editorial • Export local không upload"*
+- Metric thật khi có: số video tạo, creators, exports.
+- Tech: giữ `landing/index.html` static (đã dựng), thêm 6 card + isometric SVG line-art. Có thể nâng lên Next.js sau nếu cần blog/SEO.
 
 ---
 
@@ -65,12 +66,17 @@ interface OnboStep {
    - Import: kéo media vào timeline. Done = có clip.
    - Cut: bấm Split / phím B. Done = số clip tăng.
    - Move: kéo clip. Done = clip.start đổi.
-3. **Effects / Animate**
-   - Apply preset (Smooth Punch In). Done = clip có behavior.
-   - Mở Graph, kéo keyframe. Done = keyframe move.
-4. **Caption (killer feature)**
+3. **Caption (killer feature #1)**
    - Tab Caption → "Tự tạo caption". Done = captionTrack.blocks > 0.
-   - Đổi Style Pack + Pacing. Done = style đổi.
+   - Đổi Style Pack. Done = style đổi.
+   - *Wow moment: chữ nhảy đúng miệng, không cần làm tay*
+4. **Whip It (killer feature #2 — chỉ hiện sau khi có caption)**
+   - Nút `✨ Whip It` → chọn recipe hoặc skip. Done = compositions[] > 0.
+   - Review graphic suggestions trong Content View. Done = ít nhất 1 accepted.
+   - *Wow moment: video có editorial graphics tự động*
+5. **Animate**
+   - Apply behavior (Smooth Punch In). Done = clip có behavior.
+   - *Wow moment: animation tự dời khi cắt lại clip*
 5. **Export**
    - Bấm Export → ra file. Done = export xong.
 
