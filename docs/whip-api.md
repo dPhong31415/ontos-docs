@@ -9,6 +9,7 @@ sidebar_position: 5
 
 > Mọi thay đổi project đi qua **một command layer**. GUI, agent, MCP đều phát cùng command.
 > Đủ để thay AE trong production talking-head; đủ đơn giản để CapCut-user học được.
+> Agent workflow + MCP tool surface: xem [MCP & Agent Skills](./whip-mcp).
 
 ---
 

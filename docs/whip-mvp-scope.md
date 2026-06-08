@@ -233,18 +233,22 @@ Behavior overlap blending hoạt động (crossfade 0.3s).
 - [ ] **Blend modes per-clip**: Không có = không thể composite BẤT KỲ layer nào — blocks F11
 
 ### P1 — Tính năng v1 cần có để đủ moat vs CapCut/AE
-- [ ] **Background removal** — local RMBG model (WebGPU) — Creator cần, CapCut có
-- [ ] **Magic mask / SAM2** — click object → segment → track — cần cho precise overlay
+- [ ] **Background removal** — local RMBG model (WebGPU) — Creator cần, CapCut có → [F11](./whip-features)
+- [ ] **Magic mask / SAM2** — click object → segment → track — cần cho precise overlay → [F11](./whip-features)
 - [ ] **Audio noise removal** — talking-head pain #1, CapCut có
-- [ ] **"Whip It" pipeline v1** — LLM Art Director + image gen + RMBG + overlay + animate
-- [ ] **Image generation integration** — Seedream 5.0 / Flux API + RMBG + import to layer
-- [ ] **Template Recipe library** — 5 recipes: Iman/Hormozi/Ali/MrBeast/Gawx
-- [ ] **Graph editor UI** — bezier curve drag/edit — để claim AE parity
-- [ ] **Behavior parameter sliders UI** — params không expose ra UI hiện tại
-- [ ] **Ripple trim** — không chỉ ripple cut
+- [ ] **"Whip It" pipeline v1** — LLM Art Director + image gen + RMBG + overlay + animate → [F11 chi tiết](./whip-features) · [MCP tools](./whip-mcp)
+- [ ] **Image generation integration** — Seedream 5.0 / Flux API + RMBG + import to layer → [F11](./whip-features)
+- [ ] **StyleProfile extraction từ reference video** — 5 frames → vision LLM → StyleProfile JSON → [F11](./whip-features)
+- [ ] **Template Recipe library** — 5 recipes: Iman/Hormozi/Ali/MrBeast/Gawx → [F11](./whip-features)
+- [ ] **MCP agent interface** — tools auto-gen từ command registry, SharedWorker + headless mode → [F9](./whip-features) · [MCP docs](./whip-mcp)
+- [ ] **Graph editor UI** — bezier curve drag/edit — để claim AE parity → [F2](./whip-features)
+- [ ] **Behavior parameter sliders UI** — params không expose ra UI hiện tại → [F5](./whip-features)
+- [ ] **Ripple trim** — không chỉ ripple cut → [F1](./whip-features)
 - [ ] **Snap to beat** — Creator sync nhạc
-- [ ] **Auto-relink caption khi clip move** — SmartLink phải trigger tự động
+- [ ] **Auto-relink caption khi clip move** — SmartLink phải trigger tự động → [F4](./whip-features)
 - [ ] **Speed ramp audio pitch correction** — slow-mo không pitch-down
+
+> **F8 Semantic Analysis** ([xem chi tiết](./whip-features)): TwelveLabs đã deprecated → thay bằng frame sampling + Gemini/Claude. Engine có sẵn, không cần P-item riêng — tích hợp vào Whip It Phase 1 (frame sampler + transcript → LLM Art Director).
 
 ### P2 — Post-launch polish (sau khi có users)
 - [ ] Marker display trên ruler
@@ -254,7 +258,6 @@ Behavior overlap blending hoạt động (crossfade 0.3s).
 - [ ] Crossfade auto giữa clips
 - [ ] Transition hover preview
 - [ ] Multi-aspect ratio reflow cho templates (16:9 ↔ 9:16)
-- [ ] StyleProfile extraction từ reference video
 
 ---
 

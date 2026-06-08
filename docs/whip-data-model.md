@@ -9,6 +9,7 @@ sidebar_position: 4
 
 > Single source of truth. JSON khai báo, diff-able, git-able, **agent đọc/sửa được như text**.
 > Đủ mạnh để thay After Effects trong talking-head production; đủ đơn giản để CapCut-user học được.
+> `compositions[]` (CompositionBrief): xem [F11 — Whip It](./whip-features) · MCP command: [apply_composition](./whip-mcp)
 
 ---
 

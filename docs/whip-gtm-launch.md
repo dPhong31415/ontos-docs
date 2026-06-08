@@ -16,7 +16,7 @@ sidebar_position: 12
 
 - **Positioning: NHỌN vào talking-head viral.** Bán = *"làm reel talking-head kiểu Gadzhi/Ali Abdaal — text động + auto zoom + background removal, web, 5 phút"*. Graph editor / MCP / Semantic DAG là **moat ẩn** (chiều sâu), **KHÔNG** lên ad. Không pitch "browser AE".
 - **Monetize: LIFETIME $59 TRƯỚC** (100 suất đầu, sau $99) → tiền mặt ngay, 0 backend, validate willingness-to-pay. Subscription $8.99/mo (caption credits) bật **sau** khi có ~50 khách.
-- **Thanh toán: Lemon Squeezy (MoR) — không dùng Lemon Squeezy.** LS lo thuế VAT toàn cầu, subscription chuẩn SaaS. Chi tiết ở [Launch & Infra](./whip-launch-infra.md).
+- **Thanh toán: Lemon Squeezy (MoR) — không dùng Gumroad.** LS lo thuế VAT toàn cầu, subscription chuẩn SaaS. Chi tiết ở [Launch & Infra](./whip-launch-infra.md).
 - **V1 còn việc phải làm trước launch:** blend modes (P0 blocker), background removal, "Whip It" pipeline, image gen, graph editor UI. Xem [MVP Status](./whip-mvp-scope.md) P0/P1. → **Tập trung hoàn thành P0 trước, sau đó launch.**
 - Asset đã dựng: `whip/landing/index.html` (landing 1 trang) · `whip/landing/DEMO-SCRIPT.md` (demo 45–60s, dùng nút ✨ Demo).
 
@@ -34,10 +34,10 @@ Không phải "another editor", cũng KHÔNG bán là "browser AE". Nhọn vào 
 
 | # | USP | Vì sao là moat |
 |---|---|---|
-| 1 | **Smart Animation — bind motion vào lời nói** (zoomToRegion, không keyframe tay) | Không tool nào có. Trim lời → animation tự dời. [whip-behaviors](./whip-behaviors.md). Đây là **moat sản phẩm** dài hạn. |
-| 2 | **Agent-drivable** (project = JSON, sửa qua command có schema) | Mở đường cho "AI edit video" — v2. Đối thủ kiến trúc code (Remotion) hoặc binary (AE) không làm sạch được. |
-| 3 | **Browser-native + WebCodecs GPU render** | Không cài đặt, không account nặng, render nhanh. CapCut desktop nặng; Resolve/AE khổng lồ. |
-| 4 | **Preset viral đóng gói** (Hormozi pop, glitch, chromatic, spring zoom…) | Người làm short-form cần *tốc độ ra video*, không cần học AE. 38 preset semantic-named. |
+| 1 | **"Whip It" — AI editorial 1 nút** (LLM Art Director → CompositionBrief → graphic + animate) | **Không tool nào có.** AE cần 4-8h tay. CapCut không làm graphic. Đây là lý do creator trả tiền. [F11](./whip-features) |
+| 2 | **Smart Animation — bind motion vào lời nói** (zoomToRegion, không keyframe tay) | Trim lời → animation tự dời. [Smart Animation](./whip-behaviors). Đây là **moat sản phẩm** dài hạn. |
+| 3 | **Agent-drivable qua MCP** (project = JSON, command auto-gen thành MCP tool) | AI *thực thi* thật, không chỉ gợi ý. Đối thủ kiến trúc binary (AE) không làm sạch được. [MCP docs](./whip-mcp) |
+| 4 | **Browser-native + WebCodecs GPU render** | Không cài đặt, không account nặng, render nhanh. CapCut desktop nặng; Resolve/AE khổng lồ. |
 | 5 | **Giá + MoR cho thị trường global từ VN** | Lemon Squeezy lo thuế/chargeback → dev VN bán global không cần công ty US. |
 
 **Moat thật sự = #1 + #2** (data-model + behaviors). #3/#4/#5 là lợi thế nhập cuộc, dễ bị bắt chước; #1/#2 cần kiến trúc từ gốc — đối thủ phải viết lại engine.
@@ -136,7 +136,9 @@ BEAM gánh hàng ngàn WebSocket/RAM nhỏ; video decode/encode ở **local (OPF
 
 ---
 
-## 6. Pháp lý bắt buộc (LS review trước khi cho live)
+## 6. Pháp lý bắt buộc
+
+### 6A. Tối thiểu để Lemon Squeezy cho live
 
 Footer phải có 3 trang (LS từ chối nếu thiếu):
 - **Terms of Service** · **Privacy Policy** · **Refund Policy**
@@ -148,6 +150,50 @@ Không cần luật sư. Gen bằng **Termly** / **iubenda** (free) hoặc LLM c
 - Zero-refund: *"Có gói Free để thử, nên giao dịch Pro không hoàn lại."*
 
 Bản nháp đã đặt ở `whip/legal/` (terms.md, privacy.md, refund.md) — review rồi host.
+
+---
+
+### 6B. Luật Việt Nam 2026 — bóc tách theo công nghệ
+
+> Solo dev VN bán SaaS global → phải biết các quy định dưới đây. Phần lớn không cần làm ngay khi MVP nhỏ, nhưng biết để không bị surprise.
+
+#### Nhóm 1 — Luật An ninh mạng (Luật 24/2018/QH14, sửa đổi bổ sung 2023)
+
+| Công nghệ / tính năng | Yêu cầu pháp lý | Thủ tục | Thời hạn | Chi phí |
+|---|---|---|---|---|
+| **Lưu dữ liệu người dùng VN** (email, video project, credit log) | **Lưu cục bộ trong lãnh thổ VN** nếu có 10.000+ user VN hoặc bị coi là "mạng xã hội" / "dịch vụ cung cấp thông tin trực tuyến" theo Điều 26 | Giai đoạn MVP: chưa bắt buộc (quy mô nhỏ). Khi có >10k MAU VN: liên hệ Bộ TTTT để xin hướng dẫn; cân nhắc Supabase VN region hoặc Viettel IDC | ~3-6 tháng nếu bị yêu cầu | $0–$500/th (hosting VN) |
+| **Dữ liệu nhận dạng cá nhân** (email, name) qua Clerk Auth | Tuân thủ Nghị định 13/2023/NĐ-CP (PDPD — data protection) | Privacy Policy phải rõ: mục đích thu thập, bên thứ 3 (Clerk/Deepgram), quyền xóa dữ liệu | Trước khi launch | $0 (tự làm) |
+| **Deepgram** — gửi audio lên server Mỹ | Dữ liệu âm thanh người dùng VN rời lãnh thổ → cần thông báo rõ trong Privacy Policy ("audio được xử lý bởi bên thứ 3 ngoài VN") | Ghi rõ trong Privacy Policy + Terms | Trước launch | $0 |
+| **Seedream/Flux API** — gửi text prompt lên | Prompt text không chứa PII → ít rủi ro; ghi rõ trong Privacy Policy | Privacy Policy | Trước launch | $0 |
+| **SAM2 / RMBG local WebGPU** | Chạy hoàn toàn trên máy user → không có dữ liệu rời máy → không cần khai báo gì | Không cần | — | $0 |
+
+#### Nhóm 2 — Đăng ký doanh nghiệp / hoạt động thương mại điện tử
+
+| Tình huống | Yêu cầu | Thủ tục | Thời hạn | Chi phí |
+|---|---|---|---|---|
+| **Nhận tiền từ nước ngoài** (LS payout) | Cá nhân nhận < 200 lần/năm hoặc < $5k/năm qua tài khoản ngân hàng thường là hợp lệ theo quy định ngoại hối. Trên ngưỡng đó → cần hóa đơn xuất khẩu dịch vụ | Giai đoạn đầu: không cần thêm gì. Khi doanh thu lớn: đăng ký hộ kinh doanh hoặc công ty TNHH → xuất hóa đơn dịch vụ phần mềm 0% VAT (dịch vụ xuất khẩu) | MVP: không cần. Khi có MRR ổn định | Hộ kinh doanh: ~500K VNĐ. Công ty TNHH: ~2–5 triệu VNĐ |
+| **Website TMĐT bán trực tiếp** (domain VN hoặc có người dùng VN) | Nếu bán qua domain VN (.vn) hoặc hiển thị giá VNĐ → đăng ký sàn TMĐT / website bán hàng với Bộ Công Thương (online.gov.vn). Dùng domain .com + Lemon Squeezy làm MoR → **LS là merchant, không phải Phong** → ít bị áp | LS là bên bán (MoR) → cân nhắc không dùng domain .vn giai đoạn đầu | MVP: không cần nếu dùng LS MoR + domain .com | $0 |
+| **Thuế TNCN** (thu nhập cá nhân từ phần mềm) | Thu nhập từ bản quyền/phần mềm > 10 triệu VNĐ/hợp đồng = thuế suất 5% TNCN | Khai thuế năm; giữ bằng chứng nhận tiền từ Wise/Payoneer (LS payout) | Nộp trước 31/3 năm sau | Thuế = 5% (thực ra 5% × 40% taxable = 2% effective nếu khai đúng loại thu nhập bản quyền) |
+
+#### Nhóm 3 — Chứng nhận kỹ thuật / thông báo với Bộ TTTT
+
+| Công nghệ | Bắt buộc không? | Ghi chú |
+|---|---|---|
+| **Ứng dụng web (SPA)** | ❌ Không cần chứng nhận kỹ thuật cho web app phần mềm thông thường | Chỉ cần nếu là hệ thống thông tin cấp độ 3+ (ngân hàng, y tế, chính phủ) |
+| **AI/LLM sử dụng** (Claude/Gemini API) | ❌ Giai đoạn hiện tại Bộ TTTT chưa có quy định cụ thể buộc đăng ký với dịch vụ AI B2C nhỏ. Dự thảo Nghị định về AI 2025 đang lấy ý kiến — theo dõi | Sẽ update khi NĐ về AI được ban hành (dự kiến 2026) |
+| **Thu thập sinh trắc học** (MediaPipe — gaze, face bounding box) | ⚠️ **Cẩn thận:** dữ liệu sinh trắc học = dữ liệu nhạy cảm theo NĐ 13/2023. Tuy nhiên MediaPipe chạy **local, không lưu, không upload** → KHÔNG thu thập theo nghĩa pháp lý. Ghi rõ trong Privacy Policy "xử lý tại thiết bị, không lưu trữ" | Ghi rõ trong Privacy Policy |
+| **Deepgram** — xử lý giọng nói | ⚠️ Nếu giọng nói người dùng VN được coi là sinh trắc học + gửi ra nước ngoài → cần có đồng ý rõ ràng trước khi xử lý | Consent popup / Privacy Policy rõ trước khi user bấm "Auto Caption" đầu tiên |
+| **Lưu key Deepgram / Anthropic trên server** | Tuân thủ Thông tư 12/2022/TT-BTTTT (an toàn hệ thống thông tin cấp 1) nếu hệ thống xử lý dữ liệu thường | Secrets trong Cloudflare Worker env, không commit git — đã làm đúng |
+
+#### Tóm tắt việc cần làm ngay (trước launch)
+
+| Việc | Ai làm | Thời gian |
+|---|---|---|
+| Privacy Policy ghi rõ: Deepgram nhận audio, Clerk nhận email, MediaPipe xử lý local, Seedream nhận text prompt | Phong | 30 phút |
+| Consent rõ ràng trước khi "Auto Caption" lần đầu ("Audio của bạn sẽ được xử lý bởi Deepgram…") | Code | 1 giờ |
+| Terms of Service + Refund Policy | Gen bằng Termly/iubenda | 30 phút |
+| Dùng domain .com (không .vn) + LS làm MoR → tránh bị áp TMĐT VN giai đoạn đầu | Infra | đã OK |
+| Khi MRR > ~50 triệu VNĐ/năm: đăng ký hộ kinh doanh / công ty → xuất hóa đơn | Sau launch | — |
 
 ---
 

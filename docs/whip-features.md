@@ -8,6 +8,7 @@ sidebar_position: 4
 # Tính năng & Luồng Logic Chi Tiết
 
 > Mỗi tính năng có: mô tả ngắn, tại sao quan trọng, luồng logic step-by-step, và trạng thái hiện tại.
+> Trạng thái P0/P1/P2 và so sánh với AE/CapCut/DaVinci: xem [MVP Status & Roadmap](./whip-mvp-scope).
 
 ---
 
@@ -659,3 +660,10 @@ Nếu không có F11, Whip chỉ là "CapCut với keyframe tốt hơn" — khô
 - ❌ **Chưa có**: SAM2 magic mask / segmentation
 - ❌ **Chưa có**: CompositionBrief → Composition JSON compiler
 - ❌ **Chưa có**: Template Recipe library (5 recipes trên)
+
+**Docs liên quan:**
+- [MVP & Roadmap](./whip-mvp-scope) — P1 checklist cho F11 sub-items
+- [Smart Animation](./whip-behaviors) — behaviors là engine dưới Phase 4
+- [MCP & Agent](./whip-mcp) — `whip_it`, `set_style_profile`, `apply_composition` tools
+- [Project Document & Schema](./whip-data-model) — CompositionBrief JSON schema đầy đủ
+- [Content View](./whip-content-view) — UI entry point cho nút "Whip It"

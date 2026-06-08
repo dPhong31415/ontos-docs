@@ -1,11 +1,25 @@
 ---
 id: whip-auto-viral-pipeline
-title: Auto-Viral Pipeline (Killer Feature)
-sidebar_label: 🔥 Auto-Viral Pipeline
+title: AI Pipelines
+sidebar_label: 🔥 AI Pipelines
 sidebar_position: 13
 ---
 
-# Whip — Auto-Viral Caption Pipeline (Killer Feature)
+# Whip — AI Pipelines
+
+> Whip có 2 killer AI pipeline chạy song song — **Auto-Viral Caption** (đã ship) và **"Whip It" Editorial** (v1 target).
+> Cả hai cùng tạo ra moat: Caption đánh CapCut, Whip It đánh AE.
+
+| Pipeline | Trạng thái | Mô tả |
+|---|---|---|
+| **Auto-Viral Caption** | ✅ Live | Paste video → 10s → caption word-level viral, SmartLink bám audio khi cắt |
+| **"Whip It" Editorial** | ❌ v1 target | 1 nút → LLM Art Director → graphic + animation style Iman/Hormozi/Gawx |
+
+→ Spec đầy đủ cho "Whip It": [F11 — Whip It](./whip-features) · [MCP tools: whip_it](./whip-mcp) · [Schema: CompositionBrief](./whip-data-model)
+
+---
+
+## Auto-Viral Caption Pipeline (Killer Feature #1)
 
 > Paste video talking-head → 10 giây sau ra reel có caption viral (word-level, style pack, auto-zoom).
 > Đây là lõi của OpusClip / Captions.ai. Nó **đổi mô hình tiền** của Whip — đọc §1 trước.
@@ -54,7 +68,7 @@ Pipeline là **request/response stateless** → 1 serverless function là đủ.
 
 - **Backend = Cloudflare Worker / Supabase Edge Function** (free tier rộng, giữ API key bí mật). Stateless, không DB cho bước transcribe.
 - **Chỉ up AUDIO MP3** (vài MB) — video gốc KHÔNG rời máy → rẻ băng thông + privacy = bán được.
-- **Credits/auth**: Supabase (user + credit balance) + LS/Gumroad webhook cộng credit. Worker check credit trước khi gọi Deepgram.
+- **Credits/auth**: Supabase (user + credit balance) + Lemon Squeezy webhook cộng credit. Worker check credit trước khi gọi Deepgram.
 - Cost hạ tầng: free tier đến vài trăm user. Chỉ trả tiền Deepgram/LLM theo lượng dùng (đã tính vào giá credit).
 
 → Có thể ship **trong vài ngày**, không cần Elixir, không cần Fly.
@@ -189,3 +203,75 @@ Tất cả đọc từ JSON → đổi pacing/style = đổi data, không re-tra
 - Chưa cắm key → app dùng **ước lượng demo** (caption chữ mẫu, $0) để marketing/test render.
 
 **Font đã bundle** (index.html, đều SIL OFL/Apache): Montserrat, Inter, Playfair Display, Fira Code.
+
+---
+
+## "Whip It" Editorial Pipeline (Killer Feature #2) ❌ v1 target
+
+> Talking-head nhàm → editorial video style Iman/Hormozi/Gawx trong vài phút. Không cần AE. Không cần design skill.
+> **Đây là lý do creator trả tiền** — không phải caption, không phải keyframe.
+
+### Tại sao Whip It là v1 moat (không phải v2)
+
+CapCut không có. AE đòi skill + 4-8 giờ. Opus Clip chỉ cắt, không làm graphic. Thiếu F11 → Whip chỉ là "CapCut với keyframe tốt hơn".
+
+### Kiến trúc tóm tắt (4 phase)
+
+```
+Phase 1 — Local analysis (không upload video)
+  Whisper tiny (WebGPU) → transcript + prosody
+  DSP → beat map + BPM
+  MediaPipe → face/gaze, speaker bounding box
+
+Phase 2 — LLM Art Director
+  Input: transcript + StyleProfile + beat timestamps (text only, không có video)
+  Output: CompositionBrief JSON
+    [{t, type, data, style, animation}, ...]
+    types: stat_reveal | section_card | kinetic_list | lower_third |
+           callout_arrow | quote_card | progress_bar | broll_suggest |
+           logo_sting | social_proof
+
+Phase 3 — Asset generation
+  Path A (raster): text prompt → Seedream 5.0 / Flux → PNG → RMBG local WebGPU
+  Path B (vector): text prompt → Recraft / Ideogram → SVG
+  Path C (code-gen): LLM → Pixi component code → sandboxed eval
+
+Phase 4 — Animate + Semantic Sync
+  Behaviors gắn vào assets: beat sync, phoneme sync, energy sync
+  Transition style từ StyleProfile (Gadzhi hard cut / Gawx crossfade / Hormozi snap zoom)
+```
+
+### StyleProfile + Template Recipes
+
+User có 2 cách set style:
+1. **Upload video tham chiếu** → 5 frames → vision LLM → StyleProfile JSON
+2. **Chọn Template Recipe**: Iman Editorial / Hormozi Bold / Ali Clean / MrBeast Energy / Gawx Cinematic
+
+### COGS và credit
+
+| Action | Tier | Credit cost |
+|---|---|---|
+| Caption pipeline | Ontos (Deepgram) | $0.06/video |
+| Whip It full pipeline | Ontos (LLM + image gen) | $0.30/video |
+| StyleProfile extraction | Ontos (vision LLM) | $0.02/video |
+| RMBG local | Client free | $0 |
+| Beat detect, VAD | Client free | $0 |
+
+→ Pricing tiers: [Launch & Infra](./whip-launch-infra)
+
+### Trạng thái thực tế
+
+| Sub-feature | Trạng thái |
+|---|---|
+| Shape primitives + text overlay | ✅ live |
+| Pixi compositor + behaviors | ✅ live |
+| LLM API integration (CF Worker) | ✅ live |
+| "Whip It" orchestration (Phase 1-4) | ❌ chưa có |
+| StyleProfile extraction | ❌ chưa có |
+| Seedream/Flux image gen | ❌ chưa có |
+| RMBG local WebGPU | ❌ chưa có |
+| SAM2 magic mask | ❌ chưa có |
+| CompositionBrief compiler | ❌ chưa có |
+| Template Recipe library (5 recipes) | ❌ chưa có |
+
+→ Spec đầy đủ + luồng logic: [F11 trong Tính năng](./whip-features) · [MCP tools](./whip-mcp) · [Schema](./whip-data-model)

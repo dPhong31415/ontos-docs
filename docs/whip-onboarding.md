@@ -9,7 +9,9 @@ sidebar_position: 16
 
 > Landing kiểu Weavr (dark, hero + feature card isometric) → vào app → **onboarding tương tác**:
 > mock UI + chữ to + infographic chuột line-mỏng, **highlight con lăn nhấp nháy tím**, user PHẢI
-> làm đúng thao tác mới `next`. Chia phase: Navigation → Edit basic → Effects → Caption → Export.
+> làm đúng thao tác mới `next`. Phases: Navigation → Edit → **Caption** (killer #1) → **Whip It** (killer #2) → Animate → Export.
+>
+> Liên quan: [GTM & Launch](./whip-gtm-launch) · [Tính năng](./whip-features) · [AI Pipelines](./whip-auto-viral-pipeline)
 
 ---
 

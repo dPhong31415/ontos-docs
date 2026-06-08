@@ -75,11 +75,20 @@ sidebar_position: 15
 
 **Vì sao LS, không Gumroad:** Gumroad = đất bán PDF/template lẻ → làm phèn định vị SaaS. LS/Paddle = MoR chuẩn SaaS: quản subscription mượt, **đóng thuế VAT/Sales Tax toàn cầu thay bạn** (Stripe thuần thì bạn tự kê khai thuế từng nước = ác mộng).
 
-### Gói (đồng bộ Auto-Viral Pipeline)
-- **Free**: 1080p export, watermark, 3 caption credit/tháng.
-- **Pro $8.99/mo**: 4K/60, no watermark, 50 caption credit/tháng, full preset 👑.
-- **Studio $29/mo**: 200 credit, ưu tiên.
-- (Caption có COGS API → bán theo credit, KHÔNG unlimited — xem Auto-Viral doc §1.)
+### Gói (đồng bộ [AI Pipelines](./whip-auto-viral-pipeline))
+- **Free**: 1080p export, watermark, 3 caption credit/tháng, 0 Whip It.
+- **Pro $8.99/mo**: 4K/60, no watermark, 50 caption credit/tháng (~50 video), 5 Whip It credit/tháng, full preset 👑.
+- **Studio $29/mo**: 200 caption credit, 20 Whip It credit, ưu tiên render.
+
+**COGS per action:**
+| Action | COGS | Bán/credit |
+|---|---|---|
+| Auto Caption (Deepgram + Haiku) | ~$0.06/video | 1 credit = 1 video |
+| Whip It full pipeline (LLM + image gen) | ~$0.30/video | 1 Whip It credit = 1 video |
+| StyleProfile extraction | ~$0.02/video | bundled trong Whip It |
+| RMBG local, beat detect, VAD | $0 | miễn phí |
+
+(COGS API → KHÔNG bán unlimited — xem [AI Pipelines §1](./whip-auto-viral-pipeline).)
 
 ### Luồng tiền VN (minh bạch cho team)
 ```
@@ -183,11 +192,11 @@ Share project:
 
 ## 7. Thứ tự thực thi (đề xuất)
 
-1. **Fix bug + ổn định editor** (đang làm) → build xanh.
+1. **Fix P0 bugs** (blend modes, caption render) + **P1 core** (bg removal, Whip It v1) → xem [MVP & Roadmap](./whip-mvp-scope)
 2. **Clerk gate** vào SPA (cần pk key) + **vercel.json** + deploy thử (open hoặc gated).
 3. **Caption worker → Cloudflare** + set VITE_CAPTION_API production.
 4. **Cloud share** (Supabase Storage upload + project link) → team share thật.
-5. **Ontos/Phoenix**: webhook LS + entitlement + Dev Dashboard LiveView.
+5. **Ontos/Phoenix**: webhook LS + entitlement + Dev Dashboard LiveView. Thêm **Whip It endpoint** tại đây (LLM Art Director + image gen, gated sau credit check).
 6. Onboarding interactive (xem [whip-onboarding](./whip-onboarding.md)).
 
 → Bước 2-4 đủ để **team test + share project**. Bước 5 khi có doanh thu/credit thật.
@@ -203,6 +212,7 @@ Share project:
 | App + Landing | Vercel free | dùng `*.vercel.app` (đừng mua domain → khỏi ~$10/yr) |
 | Auth Clerk | free tới ~10k MAU | — |
 | Caption AI Deepgram | **$200 credit tặng lúc đăng ký** | ~3000+ video FREE; + cache client (đã làm) → cùng audio ko gọi lại |
+| Whip It (LLM Art Director + image gen) | Anthropic/Gemini API + Seedream/Flux | COGS ~$0.30/video — chỉ bật khi user credit đủ, không expose endpoint trước launch |
 | Cloud share Supabase | Storage 1GB + PG 500MB free | nén/giới hạn upload |
 | Caption endpoint | Cloudflare Worker 100k req/ngày free | — |
 | Billing LS | $0 khi chưa bán | chỉ 5%+50¢ **khi có giao dịch** |
