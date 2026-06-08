@@ -133,6 +133,20 @@ sidebar_position: 10
 - File: store (projects index), App menu.
 - TT: ☐.
 
+## Q. Effect Lab (node-graph, ComfyUI-style) — ☐ CẦN (admin→user)
+- Module cho admin (sau là user) **ngồi test effect → lưu thumbnail = kết quả test luôn**.
+- Giao diện **ComfyUI**: 1 preset = nhiều **node property đơn giản chain lại** (Source prop → Ramp/ease → Stagger/Noise → Output).
+- Lưu: preset JSON + thumbnail (render frame kết quả) → vào registry "My Presets".
+- Liên quan: đã có plan ở `whip-asset-layers.md` (node-graph preset authoring). Hợp nhất.
+- File cần: EffectLab.tsx (canvas node), engine/harness compile graph→behavior/effect, thumbnail capture.
+- TT: ☐.
+
+## R. UI polish — ⚠️
+- **Slider:** fill-bar granular (kéo ew-resize, to 26px, grip trắng) — ✅ vừa làm; cần thêm fill màu theo value (cần JS set --val).
+- **Number spinner** xấu → ẩn spinner, gõ/kéo — ✅.
+- **Tiếng Anh toàn bộ** (global launch) — ⚠️ đang sweep (Landing/Caption xong; Timeline/ClipPanel/topbar còn VN).
+- **Bỏ description nhỏ thừa** — ⚠️ đang dọn.
+
 ## P. Timeline/Sequence settings — ☐ CẦN
 - Mỗi timeline cần settings đầy đủ: **resolution, aspect, fps, duration, background color, audio sample rate**, tên.
 - **Flow đích:** nút Settings (gear) cạnh timeline → modal sửa các field → cập nhật project.resolution/fps/aspect... (đã có setAspect, cần mở rộng).
