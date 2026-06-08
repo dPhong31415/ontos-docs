@@ -51,16 +51,17 @@ Khi bạn cắt 3 giây đầu, Whip tự tính lại toàn bộ. Bạn không k
 
 ## Điểm khác biệt so với đối thủ
 
-| | Adobe Premiere | CapCut | Whip |
-|---|---|---|---|
-| Cắt 3s đầu | Phải chỉnh tay 10+ thứ | Phải chỉnh tay 10+ thứ | Caption tự bám (SmartLink live) |
-| Subtitle/caption | Ghim vào giây | Ghim vào giây | **Ghim vào âm vị (live)** |
-| AI edit | Suggest, không execute | Suggest, không execute | **Execute thật sự qua MCP (v1 target)** |
-| File 50GB | Crash tab | Không hỗ trợ | Stream từ SSD không load RAM **(v2 roadmap)** |
-| Creator style | Không học | Không học | Học pattern và tái dụng **(v2 roadmap)** |
-| Background removal | Plugin ngoài | ✅ | ✅ **(v1 target)** |
-| Motion graphic | AE skill + 4-8h | Basic preset | **"Whip It" 1-click (v1 target)** |
-| Chạy ở đâu | Desktop app nặng | App mobile | **Browser, không cài gì (live)** |
+| | After Effects | DaVinci Resolve | CapCut | **Whip** |
+|---|---|---|---|---|
+| Cắt 3s đầu | Tay — kéo lại 10+ thứ | Tay — kéo lại 10+ thứ | Tay — caption lệch | **SmartLink tự tính (live)** |
+| Subtitle/caption | Tay hoặc plugin | Tay | Ghim vào giây → lệch khi cắt | **Ghim vào âm vị (live)** |
+| Motion graphic / AI editorial | Skill + 4-8h tay | Không có | Basic preset | **"Whip It" 1-click (v1 target)** |
+| Background removal | Roto Brush (tay, chậm) | ✅ Magic Mask | ✅ AI auto | ✅ **(v1 target)** |
+| AI agent điều khiển | ❌ | ❌ | ❌ (preset only) | **Execute thật qua MCP (v1 target)** |
+| Graph editor | ✅ Full | ✅ Full | ❌ | ✅ **(v1 target)** |
+| Auto-animate (behaviors) | Không có | Không có | Preset cứng | **32+ bind vào lời nói (live)** |
+| Cài đặt | Desktop 30GB+ | Desktop 3GB | App / Web chậm | **Browser, không cài (live)** |
+| Export local | ✅ | ✅ | ❌ upload server | ✅ **WebCodecs local (live)** |
 
 ---
 
