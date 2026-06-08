@@ -36,7 +36,7 @@ sidebar_position: 4
    → Constraint system check: clip có "neo" (anchor) vào clip khác không?
    → Propagate thay đổi theo DAG
 
-5. User split clip (S key / chuột phải)
+5. User split clip (B/W key hoặc Cmd+K)
    → Clip gốc split thành 2 clip tại đúng điểm playhead
    → Audio track tương ứng cũng split nếu detached = false
 
@@ -413,122 +413,249 @@ Thay vì upload toàn bộ video, chỉ cần **sample một số frames** (ản
 
 ---
 
-## F11 — Dynamic Motion Graphics & Asset System ❌ (Roadmap v2)
+## F11 — "Whip It" — AI Editorial Motion Graphics ❌ (Roadmap v1)
 
-**Là gì:** Hệ thống đồ họa động (lower thirds, callout boxes, animated stats, product overlays) được drive bởi dữ liệu và semantic context — không phải kéo PNG từ Google vào.
+**Là gì:** Bấm một nút, AI biến talking-head video nhàm chán thành editorial video theo phong cách Iman Gadzhi / Alex Hormozi — kinetic typography, full-screen section cards, animated stats, geometric overlays, rhythm-driven graphics — trong vài phút. Không cần AE. Không cần design skill.
 
-**Vấn đề hiện tại creator phải làm:**
+**Vấn đề hiện tại creator phải làm thủ công:**
 ```
-1. Cần lower third → vào AE làm tay (30-60 phút)
-   hoặc search Envato/Google → tải file → import → resize → recolor → set keyframe
-2. Cần animated stat "10,000 users" → lại AE hoặc MotionArray
-3. Cần product callout → lại tìm template → chỉnh từng cái
-→ Trung bình 1-2 giờ chỉ để dàn layout graphics cho 1 video
+1. Xem lại transcript → chọn đoạn nào cần graphic
+2. Vào AE hoặc Canva → làm từng graphic thủ công (1-2 giờ)
+3. Search Envato/Google → tải template → import → resize → recolor → keyframe
+4. Đồng bộ graphic với audio beat/phoneme bằng tay
+5. Lặp lại cho mỗi section
+→ 1 video 3-5 phút = 4-8 giờ production trong AE
 ```
 
-**Giải pháp 3 layer:**
+Whip giải quyết toàn bộ pipeline này bằng 1 nút: **Whip It**.
 
-### Layer 1 — Template library (data-driven)
+---
 
-Thay vì "tìm file rồi kéo vào", graphics là **component nhận data**:
+### Luồng "Whip It" — End-to-End
 
 ```
-lower_third {
-  name: "Nguyễn Văn A"
-  title: "CEO, Whip"
-  style: "minimal_dark"      // chọn từ library
-  animation: "slide_up"
-  duration: 3.0
+User upload talking-head video
+         │
+         ▼
+   [Bấm "Whip It"]
+         │
+         ▼  ← Tùy chọn (trước khi chạy)
+   ┌─────────────────────────────────────────┐
+   │ Option A: Upload video tham chiếu style │
+   │           (copy phong cách của creator  │
+   │            này vào video của mình)      │
+   │                                         │
+   │ Option B: Chọn Template Recipe          │
+   │           [Iman Editorial] [Hormozi Bold│
+   │           [Ali Clean] [MrBeast Energy]  │
+   │           [Gawx Cinematic]              │
+   └─────────────────────────────────────────┘
+         │
+         ▼ Phase 1 — Phân tích local (không gửi video lên cloud)
+   ┌──────────────────────────────────────────┐
+   │ Whisper tiny (WebGPU local):             │
+   │   → transcript + word timestamps         │
+   │   → prosody (nhịp nói, điểm nhấn mạnh)  │
+   │                                          │
+   │ DSP beat detection (Web Worker):         │
+   │   → beat map + BPM + energy curve        │
+   │                                          │
+   │ MediaPipe face/gaze (WebGPU local):      │
+   │   → gaze direction, cut points tốt       │
+   │   → speaker bounding box per-frame       │
+   └──────────────────────────────────────────┘
+         │
+         ▼ Phase 2 — LLM Art Director
+   ┌──────────────────────────────────────────┐
+   │ Input lên LLM (Claude/Gemini):           │
+   │   • transcript + prosody                 │
+   │   • StyleProfile (từ ref video hoặc      │
+   │     Template Recipe params)              │
+   │   • energy curve + beat timestamps       │
+   │   KHÔNG gửi video — chỉ text + metadata │
+   │                                          │
+   │ LLM trả về CompositionBrief:             │
+   │   [                                      │
+   │     { t: 0-3s,   type: "hook_graphic",   │
+   │       desc: "Bold stat: $10M trong 12 tháng" },│
+   │     { t: 3-18s,  type: "talking_head",   │
+   │       caption_style: "loud" },           │
+   │     { t: 18-24s, type: "section_card",   │
+   │       headline: "Sai lầm #1" },          │
+   │     { t: 24-35s, type: "broll_suggest",  │
+   │       visual: "office hustle montage" }, │
+   │     { t: 35-40s, type: "kinetic_list",   │
+   │       items: ["Research", "Build", "Ship"]},│
+   │     ...                                  │
+   │   ]                                      │
+   └──────────────────────────────────────────┘
+         │
+         ▼ Phase 3 — Tạo và kéo assets
+   ┌──────────────────────────────────────────┐
+   │ Với mỗi graphic moment:                  │
+   │                                          │
+   │ Path A — Raster assets (photo-real):     │
+   │   CompositionBrief → text prompt         │
+   │   → Seedream 5.0 / Flux API              │
+   │   → PNG image                            │
+   │   → RMBG model (local WebGPU):           │
+   │     background removal → transparent PNG │
+   │   → import vào Pixi layer               │
+   │                                          │
+   │ Path B — Vector assets (clean graphics): │
+   │   CompositionBrief → vector prompt       │
+   │   → Recraft / Ideogram API               │
+   │   → SVG file                             │
+   │   → import trực tiếp vào Pixi           │
+   │   (không cần bg removal — cleaner)       │
+   │                                          │
+   │ Path C — Pure Pixi (code-gen):           │
+   │   LLM generate Pixi component code       │
+   │   → sandboxed eval (Pixi API only)       │
+   │   → render in compositor                 │
+   │   (stat counters, progress bars,         │
+   │    geometric shapes, text animations)    │
+   └──────────────────────────────────────────┘
+         │
+         ▼ Phase 4 — Animate + Semantic Sync
+   ┌──────────────────────────────────────────┐
+   │ Gắn behaviors vào assets:                │
+   │   • Beat sync: asset xuất hiện đúng beat │
+   │   • Phoneme sync: word highlight theo    │
+   │     miệng người nói                      │
+   │   • Energy sync: scale/opacity theo      │
+   │     loudness curve của audio             │
+   │                                          │
+   │ Transition style từ StyleProfile:        │
+   │   • Gadzhi: hard cut + slide in fast     │
+   │   • Gawx: crossfade + glow pulse         │
+   │   • Hormozi: snap zoom + text impact     │
+   └──────────────────────────────────────────┘
+         │
+         ▼ Kết quả
+   User thấy toàn bộ edit trong timeline
+   → Review + fine-tune
+   → Export
+```
+
+---
+
+### StyleProfile — Trích xuất phong cách từ video tham chiếu
+
+Khi user upload video tham chiếu (không phải video của họ):
+
+```
+Input: video tham chiếu (chỉ sample vài frame)
+         │
+         ▼ Frame sampling (5-10 frames, không upload video)
+Vision model (Claude/Gemini) phân tích:
+   → color_palette: ["#0a0a0a", "#ffffff", "#7c6af7"]
+   → typography: { font: "Montserrat Black", case: "upper", size: "large" }
+   → motion_style: "fast_cut"  // slow_burn | fast_cut | rhythmic | cinematic
+   → energy: "high"            // calm | medium | high
+   → graphic_density: "heavy"  // minimal | medium | heavy
+   → signature_moves: ["zoom_punch", "text_slam", "color_flash"]
+
+Output: StyleProfile JSON
+→ Template Recipe mới được tạo từ video này
+→ LLM Art Director dùng StyleProfile để generate CompositionBrief phù hợp
+```
+
+---
+
+### Template Recipes — Baked-in styles
+
+Cho user không có video tham chiếu:
+
+| Recipe | Đặc trưng | Graphic elements |
+|---|---|---|
+| **Iman Editorial** | Hard cut, full-screen section cards, kinetic text, stat slams | Bold section headers, number reveals, minimal geometric overlays |
+| **Hormozi Bold** | High contrast, impact text, lots of callouts | Big orange text, call-to-action boxes, metric counters |
+| **Ali Clean** | Subtle zoom, lower thirds, educational | Clean lower thirds, chapter cards, annotation arrows |
+| **MrBeast Energy** | Fast cut, colorful overlays, energetic | Bright stickers, quick transitions, score counters |
+| **Gawx Cinematic** | Slow burn, atmospheric, art-house | Moody overlays, grain, vignette, minimal text |
+
+---
+
+### Magic Mask / Segmentation (SAM2)
+
+Module tách biệt, dùng trong và ngoài "Whip It":
+
+```
+Cách dùng:
+1. User click vào bất kỳ đối tượng trong video frame
+2. SAM2 (Segment Anything Model 2) segment object đó
+3. Mask được track qua toàn bộ clip (per-frame bounding box)
+
+Use cases:
+  • Tách speaker khỏi background → blur/replace background
+  • Callout arrow chỉ vào sản phẩm → arrow auto-track khi camera di chuyển
+  • Overlay chỉ xuất hiện trên object cụ thể (không che toàn frame)
+  • Highlight/glow quanh mặt người nói
+
+Kỹ thuật:
+  SAM2 chạy local via WebGPU Worker (model ~50MB)
+  hoặc server-side nếu cần accuracy cao
+```
+
+---
+
+### Composition JSON — Pixi Renderer Reads
+
+CompositionBrief compile thành Composition JSON mà Pixi renderer đọc:
+
+```jsonc
+{
+  "compositions": [
+    {
+      "t": 0, "duration": 3.0,
+      "type": "stat_reveal",
+      "data": { "value": "$10M", "label": "in 12 months" },
+      "style": "hormozi_impact",
+      "animation": { "in": "text_slam", "ease": "expo_out" },
+      "beatSync": true
+    },
+    {
+      "t": 18.5, "duration": 5.0,
+      "type": "section_card",
+      "data": { "title": "Sai lầm #1", "subtitle": "Mà 90% founder mắc phải" },
+      "style": "iman_editorial",
+      "animation": { "in": "slide_up", "out": "cut" }
+    },
+    {
+      "t": 35.0, "duration": 8.0,
+      "type": "kinetic_list",
+      "data": { "items": ["Research", "Build", "Ship"] },
+      "style": "ali_clean",
+      "animation": { "in": "stagger_reveal", "phonemeSync": true }
+    }
+  ]
 }
-
-stat_counter {
-  value: 10000
-  label: "users"
-  format: "count_up"         // đếm từ 0 → 10,000
-  duration: 1.5
-  color: "#7c6af7"
-}
-
-callout_box {
-  text: "Tính năng mới!"
-  arrow_direction: "left"
-  target_region: { x: 0.3, y: 0.4, w: 0.2, h: 0.1 }
-}
 ```
 
-User chọn style, điền data, hệ thống render. Không phải chỉnh từng pixel.
+**Pixi renderer nhận JSON này → render frame-perfect** — không phải AE, không phải HTML/CSS.
 
-**Template categories cần có:**
-- Lower thirds (10+ styles: minimal, bold, neon, glassmorphism, corporate)
-- Stat displays (counter, bar, percentage ring, comparison)
-- Callout & arrows (highlight box, speech bubble, pointer arrow)
-- Title cards (intro slide, section break, outro)
-- Product overlays (product floating với shadow/glow)
-- Social proof (follower count, rating stars, quote)
-- Progress / timeline infographic
+---
 
-### Layer 2 — Semantic auto-suggest
+### Tại sao đây là v1 moat (không phải v2)
 
-Kết hợp với semantic analysis (F10), graphics tự được gợi ý:
+CapCut không có cái này. AE đòi hỏi skill + 4-8 giờ. Opus Clip chỉ cắt, không làm graphic.
 
-```
-Audio transcript: "Xin chào, tôi là Phong, CEO của Whip"
-→ Whisper detect: speaker introduction pattern + name + title
-→ System suggest: lower_third { name: "Phong", title: "CEO của Whip" }
-→ Anchor: phoneme "tôi là Phong" → xuất hiện đúng lúc
+Whip "Whip It" = **đây là cái mà creator trả tiền** — không phải keyframe editor, không phải caption. Creator trả tiền để ra video đẹp nhanh. Graphic pipeline chính là "nhanh".
 
-Audio: "chúng tôi đã đạt 10,000 người dùng"
-→ Detect: number + metric mention
-→ Suggest: stat_counter { value: 10000, label: "người dùng" }
-→ Anchor: semantic_keyword "10,000 người dùng"
-```
+Nếu không có F11, Whip chỉ là "CapCut với keyframe tốt hơn" — không đủ moat.
 
-User chỉ cần click "Yes" thay vì tìm template thủ công.
-
-### Layer 3 — AI generate khi không có template
-
-Khi không có template phù hợp, user mô tả bằng text:
-
-```
-Luồng:
-1. User: "cần graphic timeline 3 bước: Research → Design → Build"
-2. System gửi prompt lên Claude:
-   "Generate a Pixi.js component code for a 3-step timeline graphic
-    with animation. Steps: Research, Design, Build. Dark theme, purple accent."
-3. Claude trả về Pixi component code
-4. Whip sandbox eval → render trong compositor
-5. User thấy kết quả ngay, có thể regenerate hoặc edit data
-```
-
-**Kỹ thuật quan trọng:** Code được sandboxed eval (không chạy arbitrary code) — chỉ cho phép Pixi API calls, không có network/filesystem access.
-
-### Edge cases quan trọng
-
-**Brand consistency:**
-- User set brand colors + font 1 lần trong Project Settings
-- Tất cả templates tự inherit brand palette
-- Override per-component nếu cần
-
-**Multi-aspect ratio:**
-- Template 16:9 phải re-layout sang 9:16 tự động
-- Lower third 9:16 phải ngắn hơn để không che mặt
-- Pixi component nhận `{ w, h, aspect }` → layout adaptive
-
-**Motion tracking (advanced):**
-- Callout arrow cần "trỏ vào sản phẩm khi camera di chuyển"
-- Cần track object position per-frame
-- Local MediaPipe object tracking → bounding box per frame → anchor callout
-
-**Template marketplace (post-v2):**
-- Creator publish template → khác dùng (`import { CuChuyenCanh } from "@whip/templates"`)
-- npm-style ecosystem
-- Revenue share cho template creator
+---
 
 ### Trạng thái thực tế
 - ✅ **Có sẵn**: shape primitives (rect/ellipse), text overlay với style đầy đủ
-- ✅ **Có sẵn**: Pixi compositor — có thể render custom component
-- ❌ **Chưa có**: Template library UI
-- ❌ **Chưa có**: Data-driven component system
-- ❌ **Chưa có**: Semantic auto-suggest cho graphics
-- ❌ **Chưa có**: AI generate component
-- ❌ **Chưa có**: Motion tracking cho callout
+- ✅ **Có sẵn**: Pixi compositor — render custom component
+- ✅ **Có sẵn**: Behaviors (zoomToRegion, sequenceReveal) — animated overlays hoạt động
+- ✅ **Có sẵn**: LLM API integration (Deepgram + Claude Haiku qua CF Worker)
+- ❌ **Chưa có**: "Whip It" orchestration flow (Phase 1-4 trên)
+- ❌ **Chưa có**: StyleProfile extraction từ reference video
+- ❌ **Chưa có**: Seedream/Flux image generation integration
+- ❌ **Chưa có**: RMBG background removal (local WebGPU)
+- ❌ **Chưa có**: SAM2 magic mask / segmentation
+- ❌ **Chưa có**: CompositionBrief → Composition JSON compiler
+- ❌ **Chưa có**: Template Recipe library (5 recipes trên)

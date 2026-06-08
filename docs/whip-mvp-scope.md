@@ -225,41 +225,114 @@ Behavior overlap blending hoạt động (crossfade 0.3s).
 
 ## 9. MVP Launch Checklist
 
-### P0 — Fix trước launch (blocking)
+### P0 — Fix bugs blocking mọi flow (phải xong trước launch)
 - [ ] **Cmd+Z / Cmd+Shift+Z**: Bind undo/redo keyboard shortcut — store có sẵn, chỉ cần wire
 - [ ] **Per-block caption style render**: Fix compositor line 479 đọc `b.style` thay vì chỉ `st.style`
 - [ ] **Right-click context menu**: Cut, Copy, Paste, Delete, Disable
 - [ ] **Drag source từ MediaPool tự tạo track**: Không force user tạo track trước
+- [ ] **Blend modes per-clip**: Không có = không thể composite BẤT KỲ layer nào — blocks F11
 
-### P1 — Hoàn thiện UX trước public
-- [ ] Behavior parameter sliders UI
-- [ ] Graph editor (bezier curve UI) hoặc ít nhất kéo keyframe trên timeline
-- [ ] Ripple trim (không chỉ ripple cut)
-- [ ] Multi-clip trim
-- [ ] Snap to beat toggle
-- [ ] Auto-relink caption khi clip move
-- [ ] Caption timing editor UI
+### P1 — Tính năng v1 cần có để đủ moat vs CapCut/AE
+- [ ] **Background removal** — local RMBG model (WebGPU) — Creator cần, CapCut có
+- [ ] **Magic mask / SAM2** — click object → segment → track — cần cho precise overlay
+- [ ] **Audio noise removal** — talking-head pain #1, CapCut có
+- [ ] **"Whip It" pipeline v1** — LLM Art Director + image gen + RMBG + overlay + animate
+- [ ] **Image generation integration** — Seedream 5.0 / Flux API + RMBG + import to layer
+- [ ] **Template Recipe library** — 5 recipes: Iman/Hormozi/Ali/MrBeast/Gawx
+- [ ] **Graph editor UI** — bezier curve drag/edit — để claim AE parity
+- [ ] **Behavior parameter sliders UI** — params không expose ra UI hiện tại
+- [ ] **Ripple trim** — không chỉ ripple cut
+- [ ] **Snap to beat** — Creator sync nhạc
+- [ ] **Auto-relink caption khi clip move** — SmartLink phải trigger tự động
+- [ ] **Speed ramp audio pitch correction** — slow-mo không pitch-down
 
-### P2 — Post-launch polish
+### P2 — Post-launch polish (sau khi có users)
 - [ ] Marker display trên ruler
 - [ ] Audio EQ/compressor UI
-- [ ] Effect keyframing
-- [ ] Copy/paste clip
-- [ ] Crossfade auto
+- [ ] Effect keyframing (animate effect params over time)
+- [ ] Copy/paste clip (Cmd+C/V)
+- [ ] Crossfade auto giữa clips
 - [ ] Transition hover preview
+- [ ] Multi-aspect ratio reflow cho templates (16:9 ↔ 9:16)
+- [ ] StyleProfile extraction từ reference video
 
 ---
 
-## So sánh với SOTA 2026
+## So sánh tính năng — AE / CapCut / Whip
 
-| Feature | CapCut | DaVinci Lite | **Whip hiện tại** | Whip target |
-|---|---|---|---|---|
-| Keyframe animation | Basic | ✅ Full | ✅ Full (no graph UI) | ✅ + graph editor |
-| Caption word-level | ✅ | ❌ | ✅ SmartLink | ✅ + phoneme anchor |
-| Behaviors/auto-animate | Preset only | ❌ | ✅ 32+ compiled | ✅ + param UI |
-| Speed ramp audio | ❌ | ✅ | ⚠️ video only | ✅ |
-| Effect keyframing | ❌ | ✅ | ❌ | ✅ |
-| Graph editor | ❌ | ✅ | ❌ | ✅ |
-| AI agent API | ❌ | ❌ | 🔄 scaffold | ✅ MCP full |
-| Semantic anchor | ❌ | ❌ | ❌ | ✅ v2 |
-| WebGPU | ❌ | ❌ | ❌ | ✅ v2 |
+> Đây là bảng **tận răng** để biết v1 cần có gì để đủ moat. Tính năng nào Whip cần có nhưng chưa có → là việc cần làm.
+
+### Nhóm 1 — Core editing (phải ngang AE/CapCut)
+
+| Feature | Adobe AE | CapCut | DaVinci Lite | **Whip live** | **Whip v1 target** |
+|---|---|---|---|---|---|
+| Multi-track timeline | ✅ | ✅ | ✅ | ✅ | ✅ |
+| Keyframe animation | ✅ Full | Basic | ✅ Full | ✅ Full | ✅ |
+| Graph editor (bezier UI) | ✅ | ❌ | ✅ | ❌ | ✅ P1 |
+| Blend modes per-layer | ✅ 30+ | ✅ Basic | ✅ | ❌ | ✅ P0 🔴 |
+| Effect keyframing | ✅ | ❌ | ✅ | ❌ | ✅ P1 |
+| Speed ramp | ✅ | ✅ | ✅ | ✅ video | ✅ + audio P1 |
+| Copy/paste clip | ✅ | ✅ | ✅ | ❌ | ✅ P1 |
+| Ripple trim | ✅ | ✅ | ✅ | ⚠️ cut only | ✅ P1 |
+| Nested comp / pre-comp | ✅ | ❌ | ✅ | ❌ | ❌ v2 |
+| Motion blur | ✅ | ❌ | ✅ | ❌ | ❌ v2 |
+
+### Nhóm 2 — AI-powered features (đây là chiến trường 2026)
+
+| Feature | Adobe AE | CapCut | DaVinci Lite | **Whip live** | **Whip v1 target** |
+|---|---|---|---|---|---|
+| Auto caption word-level | ❌ | ✅ | ❌ | ✅ **SmartLink** | ✅ |
+| Caption bám audio khi cắt | ❌ | ❌ | ❌ | ✅ **moat** | ✅ |
+| Smart behaviors (auto-animate) | ❌ | Preset only | ❌ | ✅ 32+ | ✅ + param UI |
+| Agent/MCP controllable | ❌ | ❌ | ❌ | 🔄 scaffold | ✅ |
+| Background removal | ❌ (3rd party) | ✅ | ✅ | ❌ | ✅ P1 |
+| Magic mask / segmentation | ❌ (Roto Brush) | ✅ Basic | ✅ | ❌ | ✅ P1 |
+| Audio noise removal | ❌ (3rd party) | ✅ | ✅ | ❌ | ✅ P1 |
+| Auto cut silence | ❌ | ✅ | ✅ | ✅ | ✅ |
+| "Whip It" one-click editorial | ❌ | ❌ | ❌ | ❌ | ✅ **moat** P0 |
+
+### Nhóm 3 — Motion graphics (Whip vs AE)
+
+| Feature | Adobe AE | CapCut | DaVinci Lite | **Whip live** | **Whip v1 target** |
+|---|---|---|---|---|---|
+| Image generation + overlay | ❌ (Firefly plugin) | ❌ | ❌ | ❌ | ✅ Seedream/Flux P1 |
+| Background removal cho assets | ❌ (plugin) | ✅ | ✅ | ❌ | ✅ RMBG local P1 |
+| Vector graphic gen | ❌ | ❌ | ❌ | ❌ | ✅ Recraft/Ideogram P1 |
+| Style extraction từ ref video | ❌ | ❌ | ❌ | ❌ | ✅ StyleProfile P1 |
+| Template recipe library | ❌ (Motion Bro) | ✅ preset | ❌ | ❌ | ✅ 5 recipes P1 |
+| SAM2 magic mask tracking | ❌ (Roto Brush) | ❌ | ❌ | ❌ | ✅ P1 |
+| Beat/phoneme sync graphic | ❌ manual | ❌ | ❌ | ✅ behaviors | ✅ |
+
+### Nhóm 4 — Platform / Distribution
+
+| Feature | Adobe AE | CapCut | DaVinci Lite | **Whip live** | **Whip v1 target** |
+|---|---|---|---|---|---|
+| Browser, không cài app | ❌ | ✅ web | ❌ | ✅ **moat** | ✅ |
+| Export local không upload | ✅ | ❌ cloud | ✅ | ✅ | ✅ |
+| Semantic Anchor DAG | ❌ | ❌ | ❌ | ❌ | ❌ v2 |
+| WebGPU zero-copy 4K | ❌ | ❌ | ❌ | ❌ | ❌ v2 |
+| OPFS 50GB no crash | ❌ | ❌ | ❌ | ⚠️ partial | ❌ v2 full |
+| CRDT collaboration | ❌ | ✅ | ❌ | ❌ | ❌ v3 |
+
+---
+
+### Kết luận: v1 cần thêm gì để đủ moat
+
+Những tính năng dưới đây **từng đánh dấu v2/v3 nhưng cần kéo lên v1** — thiếu 1 trong số này Whip không thể cạnh tranh với CapCut cho tệp creator target:
+
+| Feature | Tại sao phải v1 |
+|---|---|
+| **Blend modes** | Không có blend modes = không thể làm BẤT KỲ overlay/composite nào. Block mọi motion graphic |
+| **Background removal** | CapCut có. Đây là feature số 1 creator talking-head cần (green screen, virtual background) |
+| **Magic mask / SAM2** | Cần để overlay chính xác theo subject. Thiếu = callouts/product overlay trông amateur |
+| **"Whip It" pipeline** | Đây là LÝ DO creator trả tiền. Không có thì Whip chỉ là editor |
+| **Image gen + RMBG** | Không có thì F11 rỗng. Creator vẫn phải search Google cho assets |
+| **Audio noise removal** | CapCut có. Talking-head creator luôn cần (microphone noise, fan noise) |
+| **Graph editor UI** | Để claim parity với AE. Hiện tại keyframe engine có nhưng không có UI để edit |
+
+**Những gì giữ v2:**
+- WebGPU zero-copy (PixiJS/WebGL vẫn đủ cho ≤ 1080p v1)
+- OPFS full 50GB proxy (import video bình thường vẫn đủ cho v1)
+- Semantic Anchor DAG (SmartLink đã cover 80% use case)
+- CRDT collaboration (single-user trước)
+- Nested composition (scene grouping đủ cho v1)

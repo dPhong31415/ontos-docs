@@ -53,12 +53,14 @@ Khi bạn cắt 3 giây đầu, Whip tự tính lại toàn bộ. Bạn không k
 
 | | Adobe Premiere | CapCut | Whip |
 |---|---|---|---|
-| Cắt 3s đầu | Phải chỉnh tay 10+ thứ | Phải chỉnh tay 10+ thứ | Tự động propagate |
-| Subtitle | Ghim vào giây | Ghim vào giây | Ghim vào âm vị |
-| AI edit | Suggest, không execute | Suggest, không execute | **Execute thật sự qua MCP** |
-| File 50GB | Crash tab | Không hỗ trợ | Stream từ SSD, không load vào RAM |
-| Creator style | Không học | Không học | Học pattern và tái dụng |
-| Chạy ở đâu | Desktop app nặng | App mobile | **Browser, không cài gì** |
+| Cắt 3s đầu | Phải chỉnh tay 10+ thứ | Phải chỉnh tay 10+ thứ | Caption tự bám (SmartLink live) |
+| Subtitle/caption | Ghim vào giây | Ghim vào giây | **Ghim vào âm vị (live)** |
+| AI edit | Suggest, không execute | Suggest, không execute | **Execute thật sự qua MCP (v1 target)** |
+| File 50GB | Crash tab | Không hỗ trợ | Stream từ SSD không load RAM **(v2 roadmap)** |
+| Creator style | Không học | Không học | Học pattern và tái dụng **(v2 roadmap)** |
+| Background removal | Plugin ngoài | ✅ | ✅ **(v1 target)** |
+| Motion graphic | AE skill + 4-8h | Basic preset | **"Whip It" 1-click (v1 target)** |
+| Chạy ở đâu | Desktop app nặng | App mobile | **Browser, không cài gì (live)** |
 
 ---
 
@@ -80,18 +82,24 @@ Có 5 lý do Adobe và CapCut không thể copy Whip trong 1-2 năm tới:
 
 | Nhóm tính năng | Trạng thái |
 |---|---|
-| Engine render video (WebGL) | ✅ Chạy ổn định |
-| Keyframe animation + bezier | ✅ Đầy đủ |
-| Timeline đa track (video + audio) | ✅ Live |
-| Auto-caption word-level (Deepgram) | ✅ Killer feature live |
-| Caption tự bám audio khi cắt/dời | ✅ Live — SmartLink |
-| Text effects, gradient, font | ✅ Live |
-| Smart behaviors (zoom-punch tự động) | ✅ Live |
-| Export H.264 qua WebCodecs | ✅ Live |
-| MCP tools cho AI agent | 🔄 Scaffold — đang build |
-| WebGPU zero-copy (render không qua CPU) | ❌ Roadmap v2 |
-| OPFS: xử lý file 50GB không load RAM | ❌ Roadmap v2 |
-| Semantic anchor DAG | ❌ Roadmap v2 |
+| Engine render video (WebGL/PixiJS) | ✅ Live — ổn định đến 1080p |
+| Keyframe animation + bezier easing | ✅ Live — 8 presets + custom cubic-bezier |
+| Timeline đa track (video + audio) | ✅ Live — snap, marquee, group move |
+| Auto-caption word-level (Deepgram) | ✅ Live — killer feature |
+| SmartLink: caption bám audio khi cắt | ✅ Live — **moat vs CapCut** |
+| Text effects, gradient, glyph stagger | ✅ Live |
+| Smart behaviors (auto-animate 32+) | ✅ Live — **moat vs AE** |
+| Export H.264 local qua WebCodecs | ✅ Live — không upload |
+| Blend modes per-clip | ❌ **v1 cần — P0 blocker** |
+| Background removal / magic mask | ❌ **v1 cần — vs CapCut** |
+| "Whip It" editorial AI pipeline | ❌ **v1 cần — core moat** |
+| Image gen + RMBG + graphic overlay | ❌ **v1 cần — vs AE** |
+| Graph editor UI | ❌ **v1 cần — vs AE/DaVinci** |
+| Audio noise removal | ❌ **v1 cần — vs CapCut** |
+| MCP agent interface | 🔄 Scaffold — v1 target |
+| WebGPU zero-copy 4K | ❌ Roadmap v2 |
+| OPFS: file 50GB không load RAM | ❌ Roadmap v2 |
+| Semantic Anchor DAG (full) | ❌ Roadmap v2 |
 | Yjs CRDT (offline + cộng tác) | ❌ Roadmap v3 |
 
 → Bảng trạng thái đầy đủ: [MVP Status & Roadmap](./whip-mvp-scope)
