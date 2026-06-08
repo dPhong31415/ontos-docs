@@ -38,30 +38,72 @@ const sidebars: SidebarsConfig = {
         },
         {
           type: "category",
-          label: "whip",
+          label: "✂️ Whip",
+          collapsed: false,
           items: [
-            // ── Vision & Pitch ───────────────────────────────
-            { type: "doc", id: "whip-overview",            label: "🗺 Tổng quan" },
-            { type: "doc", id: "whip-moat",                label: "🏆 Tại sao Whip thắng" },
-            { type: "doc", id: "whip-pitch",               label: "💰 Funding & Legal" },
-            // ── Architecture & Build ─────────────────────────
-            { type: "doc", id: "whip-architecture",        label: "🏗 Kiến trúc SOTA 2026" },
-            { type: "doc", id: "whip-features",            label: "🎯 Tính năng & Logic Flows" },
-            { type: "doc", id: "whip-mvp-scope",           label: "✅ MVP Status & Roadmap" },
-            // ── UX & Design ──────────────────────────────────
-            { type: "doc", id: "whip-ux",                  label: "🖱 UI/UX Design" },
-            { type: "doc", id: "whip-look",                label: "🎨 Signature Look" },
-            { type: "doc", id: "whip-onboarding",          label: "🎓 Onboarding" },
-            // ── Deep Dive: Engine ────────────────────────────
-            { type: "doc", id: "whip-data-model",          label: "🗄 Project Document" },
-            { type: "doc", id: "whip-behaviors",           label: "🎚 Smart Animation" },
-            { type: "doc", id: "whip-content-view",        label: "📑 Content View" },
-            { type: "doc", id: "whip-auto-viral-pipeline", label: "🔥 Auto-Viral Pipeline" },
-            { type: "doc", id: "whip-api",                 label: "🔌 Command API" },
-            { type: "doc", id: "whip-mcp",                 label: "🤖 MCP & Agent" },
-            // ── Go To Market ─────────────────────────────────
-            { type: "doc", id: "whip-gtm-launch",          label: "🚀 GTM & Launch" },
-            { type: "doc", id: "whip-launch-infra",        label: "🏗️ Launch & Infra" },
+
+            // ── Vision ──────────────────────────────────────
+            {
+              type: "category",
+              label: "📍 Vision",
+              collapsed: false,
+              items: [
+                { type: "doc", id: "whip-overview", label: "🗺 Tổng quan" },
+                { type: "doc", id: "whip-moat",     label: "🏆 Tại sao Whip thắng" },
+                { type: "doc", id: "whip-mvp-scope",label: "✅ MVP & Roadmap" },
+              ],
+            },
+
+            // ── Product ──────────────────────────────────────
+            {
+              type: "category",
+              label: "🎯 Product",
+              collapsed: false,
+              items: [
+                { type: "doc", id: "whip-features",      label: "🎯 Tính năng chi tiết" },
+                { type: "doc", id: "whip-content-view",  label: "📑 Content View" },
+                { type: "doc", id: "whip-ux",            label: "🖱 UI/UX & Shortcuts" },
+                { type: "doc", id: "whip-look",          label: "🎨 Signature Look" },
+              ],
+            },
+
+            // ── Engineering ───────────────────────────────────
+            {
+              type: "category",
+              label: "🏗 Engineering",
+              collapsed: false,
+              items: [
+                { type: "doc", id: "whip-architecture", label: "🏗 Kiến trúc SOTA 2026" },
+                { type: "doc", id: "whip-data-model",   label: "🗄 Project Document & Schema" },
+                { type: "doc", id: "whip-api",          label: "🔌 Command API" },
+                { type: "doc", id: "whip-mcp",          label: "🤖 MCP & Agent Skills" },
+              ],
+            },
+
+            // ── AI Pipeline ───────────────────────────────────
+            {
+              type: "category",
+              label: "🔥 AI Pipeline",
+              collapsed: false,
+              items: [
+                { type: "doc", id: "whip-auto-viral-pipeline", label: "🔥 Auto-Viral Caption" },
+                { type: "doc", id: "whip-behaviors",           label: "🎚 Smart Animation" },
+              ],
+            },
+
+            // ── Go To Market ──────────────────────────────────
+            {
+              type: "category",
+              label: "🚀 Go To Market",
+              collapsed: false,
+              items: [
+                { type: "doc", id: "whip-pitch",        label: "💰 Funding & Legal" },
+                { type: "doc", id: "whip-gtm-launch",   label: "🚀 GTM & Launch" },
+                { type: "doc", id: "whip-launch-infra", label: "🏗️ Launch & Infra" },
+                { type: "doc", id: "whip-onboarding",   label: "🎓 Onboarding & Landing" },
+              ],
+            },
+
           ],
         },
       ],
