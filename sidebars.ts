@@ -24,6 +24,7 @@ const sidebars: SidebarsConfig = {
         {
           type: "category",
           label: "jobradar",
+          collapsed: false,
           items: [
             { type: "doc", id: "jobradar-overview",      label: "🗺 Tổng quan" },
             { type: "doc", id: "jobradar-features",      label: "🎯 Tính năng" },
@@ -86,7 +87,7 @@ const sidebars: SidebarsConfig = {
               label: "🔥 AI Pipeline",
               collapsed: false,
               items: [
-                { type: "doc", id: "whip-auto-viral-pipeline", label: "🔥 Auto-Viral Caption" },
+                { type: "doc", id: "whip-auto-viral-pipeline", label: "🔥 AI Pipelines" },
                 { type: "doc", id: "whip-behaviors",           label: "🎚 Smart Animation" },
               ],
             },
