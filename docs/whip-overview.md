@@ -5,81 +5,104 @@ sidebar_label: 🗺 Tổng quan
 sidebar_position: 1
 ---
 
-# Whip — Agentic Talking-Head Motion Editor
+# Whip — Ngôn ngữ lập trình cho video
 
-> **Whip** là editor video/motion graphic nhẹ, GPU-native, **agent điều khiển được**, tập trung vào
-> video talking-head: smooth zoom/punch-in, keyframe sạch (kiểu Abi Abdallah / Gawx Art),
-> preset nhanh kiểu CapCut, cut sync nhạc kiểu DaVinci. Là một **app con trên Ontos platform**.
+> **Một câu:** Whip là editor video đầu tiên nơi bạn thao tác *ý nghĩa*, không phải *thời gian*.
 
 ---
 
-## Whip giải quyết nỗi đau gì
+## Vấn đề với mọi editor hiện tại
 
-| Tool | Vấn đề |
-|------|--------|
-| **After Effects** | Adobe nặng, hay crash, không tận dụng GPU, render đau, không agent-centric, `.aep` nhị phân |
-| **DaVinci Resolve** | OK nhưng cực nặng, không có hiệu ứng viral, keyframe + render vẫn cồng kềnh |
-| **CapCut** | Nhẹ + free + có hiệu ứng, **nhưng audio và keyframe vô cùng kì cục**, không control sâu |
+Tất cả editor video — từ Adobe Premiere đến CapCut — đều xây trên cùng một giả định từ những năm 1980:
 
-Whip ăn đúng **khoảng giữa** mà cả ba bỏ trống: nhẹ + free như CapCut, nhưng keyframe + audio
-+ render đúng tầm pro như Resolve/AE — **cộng** một thứ không tool nào có: **agent tự edit được**.
+> **"Timeline = trục thời gian tuyến tính. Subtitle này nằm từ giây 5.0 đến giây 8.0."**
 
-→ Không rebuild AE. Build 10% mà editor talking-head dùng 90% thời gian, và làm *cái đó* nhanh,
-ổn định, agent-drivable.
+Giả định này tạo ra vô số thao tác thủ công nhàm chán mỗi khi bạn chỉnh sửa:
 
----
+- Cắt 3 giây đầu video → phải kéo tay lại subtitle, nhạc nền, SFX, motion graphic — mỗi thứ một lần
+- Chỉnh lại câu thoại → subtitle bị lệch hình, phải gõ lại
+- Đổi nhịp cắt → beat nhạc sai, phải căn lại từng cú
 
-## Tên & định vị
-
-- **Codename:** `Whip` — chính là cú whip-pan, là động từ ("whip it together"), 1 âm tiết, gào lên chuyển động.
-- **Tagline:** *Made with Whip.* — slogan tự bán trên mọi video talking-head viral.
-- **Dự phòng tên:** Glide (mượt-premium) / Swoop (vui, social-native).
-
-> ⚠️ **Đừng nhầm với [Kinetic Layer](./ontology-kinetic.md)** của Ontos — đó là action engine
-> của platform. Whip là app con. Editor từng tên nháp "Kinetic" → đã đổi thành **Whip** để tránh đụng.
+Mỗi lần chỉnh nhỏ đẻ ra 10 tác vụ phụ. Editor giỏi thì làm nhanh hơn — nhưng vẫn *phải tự tay làm*.
 
 ---
 
-## Ý tưởng lõi: một document, ba client
+## Whip đặt cược ngược lại
 
-Toàn bộ kiến trúc gói gọn trong một hình:
+Thay vì quản lý **thời gian tuyệt đối**, Whip quản lý **mối quan hệ ngữ nghĩa** — tức là *ý nghĩa* của từng phần tử và nó liên quan đến phần tử nào khác.
 
 ```
-                 ┌──────────────────────────┐
-                 │  project.whip (JSON)      │  ← single source of truth
-                 │  timeline khai báo         │
-                 └────────────┬──────────────┘
-                              │
-        ┌─────────────────────┼─────────────────────┐
-        │                     │                     │
-   ┌────▼─────┐         ┌─────▼──────┐        ┌──────▼──────┐
-   │  Human   │         │   Agent    │        │  Renderer   │
-   │  GUI     │         │  (MCP/LLM) │        │  preview +  │
-   │          │         │            │        │  export     │
-   └────┬─────┘         └─────┬──────┘        └──────▲──────┘
-        │                     │                      │
-        └─────► cùng một Command API ◄───────────────┘
-            (addClip, setKeyframe, applyPreset, split…)
+CapCut/Premiere:   subtitle.start = 5.000s        ← ghim cứng vào giây
+
+Whip:              subtitle.anchor = {
+                     type: "phoneme",              ← ghim vào âm vị (âm thanh)
+                     word: "xin chào",             ← từ cụ thể trong audio
+                     clip: "audio_track_1"
+                   }
 ```
 
-- **GUI** và **Agent** đều chỉ là client phát cùng một command.
-- **Renderer** là hàm thuần: `(project, time) → frame`. Tất định.
-- Vì project là JSON đi qua **command layer có schema validate**, agent mutate an toàn — mỗi edit là một diff.
+**Giải thích phoneme:** Âm vị (phoneme) là đơn vị âm thanh nhỏ nhất — chữ "xin" là 3 âm vị /x/, /i/, /n/. Thay vì nói "subtitle xuất hiện lúc giây 5.0", Whip nói "subtitle này xuất hiện đúng lúc người ta phát âm chữ *xin chào*." Dù bạn có cắt, dời, hay tăng tốc video — câu đó vẫn tự khớp.
 
-Đây là khác biệt với Remotion (video = code React). Ở Whip **video = data**, agent sửa data chứ
-không sửa code → an toàn, review được, undo được, GUI luôn sync. Pattern này chính là phiên bản
-**client-side** của [Kinetic Action Engine](./ontology-kinetic.md) — xem [Ontology Reuse](./whip-ontology-reuse.md).
+Khi bạn cắt 3 giây đầu, Whip tự tính lại toàn bộ. Bạn không kéo tay gì cả.
+
+Đây là lý do chúng tôi gọi Whip là **ngôn ngữ lập trình cho video**: thay vì làm từng bước thủ công, bạn khai báo *ý định* — "subtitle này theo câu này", "SFX này theo transition này" — và hệ thống tự thực thi.
 
 ---
 
-## Đọc tiếp
+## Điểm khác biệt so với đối thủ
 
-| Trang | Nội dung |
-|-------|----------|
-| [🎯 Tính năng](./whip-features.md) | Feature matrix đầy đủ vs CapCut/Resolve/AE |
-| [🏗 System Design](./whip-system-design.md) | Engine, render pipeline, các luồng, web vs Electron |
-| [🗄 Project Document](./whip-data-model.md) | Schema timeline JSON = nodes/edges |
-| [🔌 Command API](./whip-api.md) | Action types, REST, validate, undo |
-| [🤖 MCP & Agent](./whip-mcp.md) | MCP server, agent skills (autoPunchIn…) |
-| [🧬 Ontology Reuse](./whip-ontology-reuse.md) | Dùng được gì từ Ontos, build riêng gì |
-| [✅ Roadmap](./whip-roadmap.md) | v0 → v1 (NLE đủ) → v2 |
+| | Adobe Premiere | CapCut | Whip |
+|---|---|---|---|
+| Cắt 3s đầu | Phải chỉnh tay 10+ thứ | Phải chỉnh tay 10+ thứ | Tự động propagate |
+| Subtitle | Ghim vào giây | Ghim vào giây | Ghim vào âm vị |
+| AI edit | Suggest, không execute | Suggest, không execute | **Execute thật sự qua MCP** |
+| File 50GB | Crash tab | Không hỗ trợ | Stream từ SSD, không load vào RAM |
+| Creator style | Không học | Không học | Học pattern và tái dụng |
+| Chạy ở đâu | Desktop app nặng | App mobile | **Browser, không cài gì** |
+
+---
+
+## Tại sao nó sẽ thắng
+
+Có 5 lý do Adobe và CapCut không thể copy Whip trong 1-2 năm tới:
+
+1. **Semantic Temporal Graph** — kiến trúc dữ liệu hoàn toàn mới (Adobe rebuild mất 5+ năm vì 30 năm technical debt)
+2. **Local-first + WebGPU** — render 4K ngay trên trình duyệt, không cần download app, không crash
+3. **Agent thật sự điều khiển được** — editor đầu tiên AI có thể *edit thật*, không chỉ "gợi ý"
+4. **Creator lock-in** — style và pattern của creator được học và encode, không export sang tool khác được
+5. **Zero Latency** — mọi thao tác phản hồi ngay lập tức dù file nặng cỡ nào
+
+→ Giải thích chi tiết từng điểm: [Tại sao Whip sẽ thắng](./whip-moat)
+
+---
+
+## Hiện tại đang ở đâu
+
+| Nhóm tính năng | Trạng thái |
+|---|---|
+| Engine render video (WebGL) | ✅ Chạy ổn định |
+| Keyframe animation + bezier | ✅ Đầy đủ |
+| Timeline đa track (video + audio) | ✅ Live |
+| Auto-caption word-level (Deepgram) | ✅ Killer feature live |
+| Caption tự bám audio khi cắt/dời | ✅ Live — SmartLink |
+| Text effects, gradient, font | ✅ Live |
+| Smart behaviors (zoom-punch tự động) | ✅ Live |
+| Export H.264 qua WebCodecs | ✅ Live |
+| MCP tools cho AI agent | 🔄 Scaffold — đang build |
+| WebGPU zero-copy (render không qua CPU) | ❌ Roadmap v2 |
+| OPFS: xử lý file 50GB không load RAM | ❌ Roadmap v2 |
+| Semantic anchor DAG | ❌ Roadmap v2 |
+| Yjs CRDT (offline + cộng tác) | ❌ Roadmap v3 |
+
+→ Bảng trạng thái đầy đủ: [MVP Status & Roadmap](./whip-mvp-scope)
+
+---
+
+## Hướng dẫn đọc doc theo vai trò
+
+| Bạn là | Đọc theo thứ tự này |
+|---|---|
+| Developer mới | [Kiến trúc SOTA 2026](./whip-architecture) → [Tính năng & Luồng Logic](./whip-features) → [Data Model](./whip-data-model) |
+| Designer / Creator | [Tính năng](./whip-features) → [Look & Feel](./whip-look) → [Content View](./whip-content-view) |
+| Nhà đầu tư / Partner | [Tại sao thắng](./whip-moat) → [Roadmap](./whip-mvp-scope) → [Funding & Legal](./whip-pitch) |
+| AI Agent | [MCP & Agent](./whip-mcp) → [Command API](./whip-api) |
