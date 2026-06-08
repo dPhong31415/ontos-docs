@@ -120,4 +120,4 @@ autoDuck                              → action_type, credit_cost, audit
 ```
 
 Skill nặng/tốn tiền (transcribe, face-track batch, cloud render) → thành **action_type Ontos**
-để mượn billing + entitlement. Skill nhẹ realtime → ở client. Ranh giới: [Ontology Reuse](./whip-ontology-reuse.md).
+để mượn billing + entitlement. Skill nhẹ realtime → ở client. Ranh giới: [Kiến trúc](./whip-architecture).

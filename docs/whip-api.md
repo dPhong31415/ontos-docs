@@ -46,7 +46,7 @@ invoke(command_name, params)
 
 **Quy tắc:** validate trước, mutate sau. Lỗi giữa chừng → không để lại state nửa vời (Immer lo).
 Khác Kinetic ở chỗ: **không có credit/entitlement ở client** — cái đó chỉ áp cho server-side
-action (export 4K, AI job) qua Ontos, xem [Ontology Reuse](./whip-ontology-reuse.md).
+action (export 4K, AI job) qua Ontos, xem [Kiến trúc](./whip-architecture).
 
 ---
 
@@ -122,7 +122,7 @@ POST /apps/whip/actions/auto_punch_in       LLM phân tích → trả keyframes
 
 → Các action **client-side** (kéo keyframe) **không** lên server. Các action **nặng/AI/tốn tiền**
 mới thành `action_type` Ontos để mượn entitlement + credit + audit. Ranh giới này là cốt lõi —
-xem [Ontology Reuse](./whip-ontology-reuse.md).
+xem [Kiến trúc](./whip-architecture).
 
 ---
 

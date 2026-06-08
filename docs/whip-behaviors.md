@@ -120,7 +120,7 @@ compile(project):
 
 - Chạy **mỗi khi** anchor đổi (trim, re-transcribe, kéo region).
 - Keyframe sinh ra **đánh dấu `generated`** — khác keyframe tay (`manual`).
-- Preview/export đọc keyframe đã compile như thường → engine [render](./whip-system-design.md) không cần biết behavior là gì.
+- Preview/export đọc keyframe đã compile như thường → engine render không cần biết behavior là gì.
 
 ---
 

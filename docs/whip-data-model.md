@@ -23,7 +23,7 @@ sidebar_position: 4
 | action_log | undo log (before/after) |
 
 → Cùng metamodel với [Ontology Metamodel](./ontology-metamodel.md), nhưng **instance sống trong
-RAM client**, không phải Postgres. Lý do ở [Ontology Reuse](./whip-ontology-reuse.md).
+RAM client**, không phải Postgres. Lý do ở [Kiến trúc](./whip-architecture).
 
 ---
 

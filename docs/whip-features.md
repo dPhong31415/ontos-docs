@@ -410,3 +410,125 @@ Thay vì upload toàn bộ video, chỉ cần **sample một số frames** (ản
 - `phoneme` — neo vào âm vị cụ thể trong audio
 - `semantic_keyword` — neo vào lúc người nói một từ/cụm từ
 - `beat_grid` — neo vào beat map của nhạc
+
+---
+
+## F11 — Dynamic Motion Graphics & Asset System ❌ (Roadmap v2)
+
+**Là gì:** Hệ thống đồ họa động (lower thirds, callout boxes, animated stats, product overlays) được drive bởi dữ liệu và semantic context — không phải kéo PNG từ Google vào.
+
+**Vấn đề hiện tại creator phải làm:**
+```
+1. Cần lower third → vào AE làm tay (30-60 phút)
+   hoặc search Envato/Google → tải file → import → resize → recolor → set keyframe
+2. Cần animated stat "10,000 users" → lại AE hoặc MotionArray
+3. Cần product callout → lại tìm template → chỉnh từng cái
+→ Trung bình 1-2 giờ chỉ để dàn layout graphics cho 1 video
+```
+
+**Giải pháp 3 layer:**
+
+### Layer 1 — Template library (data-driven)
+
+Thay vì "tìm file rồi kéo vào", graphics là **component nhận data**:
+
+```
+lower_third {
+  name: "Nguyễn Văn A"
+  title: "CEO, Whip"
+  style: "minimal_dark"      // chọn từ library
+  animation: "slide_up"
+  duration: 3.0
+}
+
+stat_counter {
+  value: 10000
+  label: "users"
+  format: "count_up"         // đếm từ 0 → 10,000
+  duration: 1.5
+  color: "#7c6af7"
+}
+
+callout_box {
+  text: "Tính năng mới!"
+  arrow_direction: "left"
+  target_region: { x: 0.3, y: 0.4, w: 0.2, h: 0.1 }
+}
+```
+
+User chọn style, điền data, hệ thống render. Không phải chỉnh từng pixel.
+
+**Template categories cần có:**
+- Lower thirds (10+ styles: minimal, bold, neon, glassmorphism, corporate)
+- Stat displays (counter, bar, percentage ring, comparison)
+- Callout & arrows (highlight box, speech bubble, pointer arrow)
+- Title cards (intro slide, section break, outro)
+- Product overlays (product floating với shadow/glow)
+- Social proof (follower count, rating stars, quote)
+- Progress / timeline infographic
+
+### Layer 2 — Semantic auto-suggest
+
+Kết hợp với semantic analysis (F10), graphics tự được gợi ý:
+
+```
+Audio transcript: "Xin chào, tôi là Phong, CEO của Whip"
+→ Whisper detect: speaker introduction pattern + name + title
+→ System suggest: lower_third { name: "Phong", title: "CEO của Whip" }
+→ Anchor: phoneme "tôi là Phong" → xuất hiện đúng lúc
+
+Audio: "chúng tôi đã đạt 10,000 người dùng"
+→ Detect: number + metric mention
+→ Suggest: stat_counter { value: 10000, label: "người dùng" }
+→ Anchor: semantic_keyword "10,000 người dùng"
+```
+
+User chỉ cần click "Yes" thay vì tìm template thủ công.
+
+### Layer 3 — AI generate khi không có template
+
+Khi không có template phù hợp, user mô tả bằng text:
+
+```
+Luồng:
+1. User: "cần graphic timeline 3 bước: Research → Design → Build"
+2. System gửi prompt lên Claude:
+   "Generate a Pixi.js component code for a 3-step timeline graphic
+    with animation. Steps: Research, Design, Build. Dark theme, purple accent."
+3. Claude trả về Pixi component code
+4. Whip sandbox eval → render trong compositor
+5. User thấy kết quả ngay, có thể regenerate hoặc edit data
+```
+
+**Kỹ thuật quan trọng:** Code được sandboxed eval (không chạy arbitrary code) — chỉ cho phép Pixi API calls, không có network/filesystem access.
+
+### Edge cases quan trọng
+
+**Brand consistency:**
+- User set brand colors + font 1 lần trong Project Settings
+- Tất cả templates tự inherit brand palette
+- Override per-component nếu cần
+
+**Multi-aspect ratio:**
+- Template 16:9 phải re-layout sang 9:16 tự động
+- Lower third 9:16 phải ngắn hơn để không che mặt
+- Pixi component nhận `{ w, h, aspect }` → layout adaptive
+
+**Motion tracking (advanced):**
+- Callout arrow cần "trỏ vào sản phẩm khi camera di chuyển"
+- Cần track object position per-frame
+- Local MediaPipe object tracking → bounding box per frame → anchor callout
+
+**Template marketplace (post-v2):**
+- Creator publish template → khác dùng (`import { CuChuyenCanh } from "@whip/templates"`)
+- npm-style ecosystem
+- Revenue share cho template creator
+
+### Trạng thái thực tế
+- ✅ **Có sẵn**: shape primitives (rect/ellipse), text overlay với style đầy đủ
+- ✅ **Có sẵn**: Pixi compositor — có thể render custom component
+- ❌ **Chưa có**: Template library UI
+- ❌ **Chưa có**: Data-driven component system
+- ❌ **Chưa có**: Semantic auto-suggest cho graphics
+- ❌ **Chưa có**: AI generate component
+- ❌ **Chưa có**: Motion tracking cho callout
