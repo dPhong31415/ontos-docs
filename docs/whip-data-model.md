@@ -8,99 +8,220 @@ sidebar_position: 4
 # Project Document — `project.whip`
 
 > Single source of truth. JSON khai báo, diff-able, git-able, **agent đọc/sửa được như text**.
-> Về bản chất là một **đồ thị nodes/edges** — chính là ontology, nhưng cho timeline.
+> Đủ mạnh để thay After Effects trong talking-head production; đủ đơn giản để CapCut-user học được.
 
 ---
 
-## Project = đồ thị (map sang ontology)
-
-| Ontology (Ontos) | Whip |
-|---|---|
-| Object / Node | `asset`, `track`, `clip`, `keyframe`, `effect`, `transition` |
-| Property (JSONB) | `clip.properties`, `effect.params` |
-| Link / Edge (typed) | `clip → asset` (uses), `track → clip` (contains), `clip → keyframe` (animates) |
-| Action Type | [Command](./whip-api.md) (addClip, setKeyframe…) |
-| action_log | undo log (before/after) |
-
-→ Cùng metamodel với [Ontology Metamodel](./ontology-metamodel.md), nhưng **instance sống trong
-RAM client**, không phải Postgres. Lý do ở [Kiến trúc](./whip-architecture).
-
----
-
-## Schema (zod = validate + TS types + agent guardrails)
+## Toàn bộ Schema — production-complete
 
 ```jsonc
 {
   "version": 1,
   "fps": 30,
   "resolution": [1920, 1080],
-  "aspect": "16:9",                     // | "9:16" | "1:1" | "4:5"
-  "duration": 142.5,                    // giây
+  "aspect": "16:9",          // "9:16" | "1:1" | "4:5" | "2.39:1"
+  "duration": 142.5,
 
+  // ── Assets ────────────────────────────────────────────────────────────
   "assets": {
-    "a1": { "type": "video", "src": "interview.mp4", "duration": 600, "w": 1920, "h": 1080 },
-    "a2": { "type": "audio", "src": "music.mp3", "duration": 180 },
-    "a3": { "type": "image", "src": "logo.png" }
+    "a_video":   { "type": "video",  "src": "interview.mp4",
+                   "duration": 600, "w": 1920, "h": 1080,
+                   "hasAlpha": false },
+
+    "a_music":   { "type": "audio",  "src": "bgm.mp3",  "duration": 180 },
+
+    "a_logo":    { "type": "image",  "src": "logo.png",
+                   "hasAlpha": true },       // PNG/WEBP với alpha channel
+
+    "a_graphic": { "type": "image",  "src": "generated_overlay.png",
+                   "hasAlpha": true,
+                   "generatedBy": "seedream", "prompt": "..." },  // AI gen asset
+
+    "a_vector":  { "type": "svg",    "src": "stat_bar.svg" },     // vector graphic
+
+    "a_srt":     { "type": "srt",    "src": "captions_en.srt",
+                   "language": "en" }        // import SRT/VTT file
   },
 
+  // ── Tracks ────────────────────────────────────────────────────────────
   "tracks": [
+
+    // ── Video track (main talking-head) ──
     {
-      "id": "v1", "kind": "video", "muted": false, "solo": false,
+      "id": "v1", "kind": "video",
+      "label": "Main Camera",
+      "locked": false, "muted": false, "solo": false,
       "clips": [
         {
-          "id": "c1", "asset": "a1",
-          "start": 0, "end": 8.2,        // vị trí trên timeline
-          "in": 12.0,                    // in-point trong source
-          "speed": 1.0,                  // time-remap
-          "blend": "normal",
-          "properties": {                // mọi prop là keyframe track
+          "id": "c1", "asset": "a_video",
+          "start": 0, "end": 8.2,
+          "in": 12.0,              // in-point trong source video
+          "speed": 1.0,            // constant speed (1x, 0.5x, 2x...)
+          "speedKeys": [],         // speed ramp keyframes [{t, speed}]
+          "pitchLock": true,       // giữ pitch khi speed thay đổi
+          "blend": "normal",       // BLEND MODE: normal|multiply|screen|overlay|add|soft_light
+          "opacity": 1.0,
+          "maskId": null,          // SAM2 segment mask (nếu có)
+          "reframe": null,         // { x: 0.5, y: 0.3, scale: 1.2 } smart reframe
+          "cropAspect": null,      // "9:16" — crop clip sang aspect khác
+          "properties": {
             "scale":    [ {"t":0,"v":1.0,"ease":"smooth"},
-                          {"t":2.0,"v":1.08,"ease":[0.16,1,0.3,1]} ],   // punch-in
+                          {"t":2.0,"v":1.08,"ease":[0.16,1,0.3,1]} ],  // punch-in
             "position": [ {"t":0,"v":[0,0]} ],
             "rotation": [ {"t":0,"v":0} ],
             "opacity":  [ {"t":0,"v":1} ],
-            "crop":     [ {"t":0,"v":[0,0,0,0]} ]
+            "crop":     [ {"t":0,"v":[0,0,0,0]} ]   // [top, right, bottom, left] normalized
           },
           "effects": [
-            { "id":"e1", "type":"filmGrain", "params":{"amount":0.2} },
-            { "id":"e2", "type":"rgbSplit",  "params":{"offset":[ {"t":0,"v":0},{"t":0.3,"v":6} ]} }
+            // ── Color / Look ──
+            { "id":"e_grade", "type":"colorCorrect",
+              "params": {
+                "liftR":0, "liftG":0, "liftB":0,           // shadows
+                "gammaR":1,"gammaG":1,"gammaB":1,           // midtones
+                "gainR":1, "gainG":1, "gainB":1,            // highlights
+                "saturation":1.0, "contrast":1.0,
+                "temperature":0, "tint":0
+              }
+            },
+            // ── Atmosphere ──
+            { "id":"e_grain", "type":"filmGrain",
+              "params": {
+                "amount": [ {"t":0,"v":0.15} ],             // KEYFRAME-able
+                "size": 1.2, "blendMode": "overlay"
+              }
+            },
+            // ── Distortion ──
+            { "id":"e_rgb", "type":"rgbSplit",
+              "params": {
+                "offset": [ {"t":0,"v":0}, {"t":0.3,"v":6}, {"t":0.6,"v":0} ]  // keyframe
+              }
+            },
+            // ── Bloom ──
+            { "id":"e_bloom", "type":"bloom",
+              "params": { "threshold":0.7, "intensity":0.4, "radius":20 }
+            }
           ]
         }
       ]
     },
+
+    // ── Overlay track (generated graphics từ F11) ──
     {
-      "id": "txt1", "kind": "text",
+      "id": "ov1", "kind": "overlay",
+      "label": "AI Graphics",
       "clips": [
-        { "id":"t1", "start":1.0, "end":4.0,
-          "text":"Khải Phong", "font":"Inter", "size":72, "color":"#fff",
-          "preset":"lowerThird",
-          "properties": { "position":[{"t":0,"v":[120,880]}], "opacity":[{"t":0,"v":0},{"t":0.4,"v":1}] } }
+        {
+          "id": "ov_stat", "asset": "a_graphic",
+          "start": 0, "end": 3.0,
+          "blend": "normal",       // screen | add hay dùng cho light effects
+          "properties": {
+            "scale":    [ {"t":0,"v":0.8}, {"t":0.2,"v":1.0,"ease":[0.16,1,0.3,1]} ],
+            "opacity":  [ {"t":0,"v":0}, {"t":0.1,"v":1} ]
+          },
+          "compositionRef": "comp_001"   // link về compositions[] element
+        }
       ]
     },
+
+    // ── Caption track ──
+    {
+      "id": "cap1", "kind": "caption",
+      "stylePack": "loud",          // loud | clean | cinematic | terminal
+      "pacing": "chunk",            // word | chunk | karaoke
+      "language": "vi",
+      "posY": 0.82,
+      "speakerMap": {               // diarization: speaker ID → display style
+        "SPEAKER_00": { "color": "#ffffff", "label": "Host" },
+        "SPEAKER_01": { "color": "#7c6af7", "label": "Guest" }
+      },
+      "blocks": [
+        {
+          "text": "Bí mật nằm ở",
+          "start": 12.04, "end": 13.50,
+          "speakerId": "SPEAKER_00",
+          "style": null,            // null = inherit track style; override per-block nếu cần
+          "srcAsset": "a_video", "srcIn": 12.04, "srcDur": 1.46,  // SmartLink anchor
+          "words": [
+            { "w":"Bí",   "start":12.04, "end":12.30 },
+            { "w":"mật",  "start":12.31, "end":12.50 },
+            { "w":"nằm",  "start":12.51, "end":12.90 },
+            { "w":"ở",    "start":12.91, "end":13.50 }
+          ]
+        }
+      ]
+    },
+
+    // ── Audio track ──
     {
       "id": "aud1", "kind": "audio",
+      "label": "Background Music",
       "clips": [
-        { "id":"m1", "asset":"a2", "start":0, "end":142.5, "in":0,
+        {
+          "id": "m1", "asset": "a_music",
+          "start": 0, "end": 142.5, "in": 0,
           "gainDb": -6,
-          "automation": { "gainDb": [ {"t":0,"v":-6},{"t":40,"v":-18},{"t":48,"v":-6} ] },  // ducking tay
-          "fx": [ { "type":"eq", "bands":[{"f":120,"gain":-3}] },
-                  { "type":"compressor", "threshold":-18, "ratio":3 } ] }
+          "pitchLock": true,         // pitch không đổi khi speed thay đổi
+          "automation": {
+            "gainDb": [ {"t":0,"v":-6},{"t":40,"v":-18},{"t":48,"v":-6} ]  // ducking
+          },
+          "fx": [
+            { "type":"eq",
+              "bands": [ {"f":80,"gain":-4,"q":1}, {"f":8000,"gain":2,"q":0.7} ] },
+            { "type":"compressor", "threshold":-18, "ratio":3, "attack":5, "release":100 },
+            { "type":"noiseRemoval", "strength":0.6, "mode":"auto" },  // noise gate AI
+            { "type":"limiter", "ceiling":-1 }
+          ]
+        }
       ]
     }
   ],
 
+  // ── Transitions ───────────────────────────────────────────────────────
   "transitions": [
-    { "id":"x1", "between":["c1","c2"], "type":"crossDissolve", "duration":0.5 }
+    {
+      "id":"x1", "between":["c1","c2"],
+      "type": "crossDissolve",     // crossDissolve | dipToBlack | wipe | flashCut | zoomCut
+      "duration": 0.5,
+      "ease": "smooth"
+    }
   ],
 
-  // ── F11 "Whip It" — editorial motion graphics ──────────────────────────
+  // ── Anchors + Behaviors (smart animation layer) ───────────────────────
+  "anchors": {
+    "regions": [
+      { "id":"r_chart", "label":"nói về graph",
+        "start":12.4, "end":18.9,
+        "source":"transcript:revenue chart",  // tự động match từ transcript
+        "clipId": "c1" }
+    ],
+    "cues": [
+      { "id":"cue_emph_3", "t":24.1, "kind":"emphasis", "source":"speech" },
+      { "id":"cue_beat_7", "t":14.0, "kind":"beat", "source":"dsp" }
+    ],
+    "beats": [
+      { "t": 0.5 }, { "t": 1.0 }, { "t": 1.5 }   // beat map từ DSP
+    ]
+  },
+  "behaviors": [
+    { "id":"b1", "type":"zoomToRegion",
+      "target":"c1", "bind":"r_chart",
+      "params":{ "amount":1.15, "ease":"smooth", "releaseAfter":true }
+    },
+    { "id":"b2", "type":"followSubject",
+      "target":"c1", "bind":"auto",   // MediaPipe face tracking
+      "params":{ "smoothing":0.8, "maxOffset":0.1 }
+    }
+  ],
+
+  // ── F11 "Whip It" ──────────────────────────────────────────────────────
   "styleProfile": {
-    "source": "recipe",                  // "recipe" | "extracted"
-    "recipeId": "iman_editorial",        // hoặc null nếu extracted từ video
+    "source": "recipe",              // "recipe" | "extracted"
+    "recipeId": "iman_editorial",
     "palette": ["#0a0a0a","#ffffff","#7c6af7"],
-    "motionStyle": "fast_cut",           // fast_cut | slow_burn | rhythmic | cinematic
+    "motionStyle": "fast_cut",       // fast_cut | slow_burn | rhythmic | cinematic
     "energy": "high",
-    "graphicDensity": "heavy"
+    "graphicDensity": "heavy",
+    "typography": { "family": "Montserrat", "weight": 900, "case": "upper" }
   },
 
   "compositions": [
@@ -110,8 +231,12 @@ RAM client**, không phải Postgres. Lý do ở [Kiến trúc](./whip-architect
       "type": "stat_reveal",
       "data": { "value": "$10M", "label": "in 12 months" },
       "style": "hormozi_impact",
-      "animation": { "in": "text_slam", "ease": "expo_out" },
-      "beatSync": true
+      "layers": [
+        { "assetId": "a_graphic", "blend": "normal", "scale": 1.0 }
+      ],
+      "animation": { "in": "text_slam", "out": "cut", "ease": "expo_out" },
+      "beatSync": true,
+      "phonemeSync": false
     },
     {
       "id": "comp_002",
@@ -120,11 +245,132 @@ RAM client**, không phải Postgres. Lý do ở [Kiến trúc](./whip-architect
       "data": { "title": "Sai lầm #1", "subtitle": "Mà 90% founder mắc phải" },
       "style": "iman_editorial",
       "animation": { "in": "slide_up", "out": "cut" }
+    },
+    {
+      "id": "comp_003",
+      "t": 35.0, "duration": 8.0,
+      "type": "kinetic_list",
+      "data": { "items": ["Research", "Build", "Ship"] },
+      "style": "ali_clean",
+      "animation": { "in": "stagger_reveal" },
+      "phonemeSync": true          // từng item xuất hiện đúng phoneme tương ứng
+    },
+    {
+      "id": "comp_004",
+      "t": 48.0, "duration": 4.0,
+      "type": "callout_arrow",
+      "data": { "text": "MacBook Pro M4", "direction": "left" },
+      "maskId": "mask_laptop",     // arrow bám SAM2 mask → tự track khi camera di chuyển
+      "animation": { "in": "draw_arrow", "out": "fade" }
+    }
+  ],
+
+  // ── Masks (SAM2 segmentation) ──────────────────────────────────────────
+  "masks": [
+    {
+      "id": "mask_laptop",
+      "clipId": "c1",
+      "seedPoint": { "x": 0.62, "y": 0.45, "frameT": 48.2 },  // điểm user click
+      "tracked": true,             // SAM2 track qua toàn clip
+      "boundingBoxes": []          // populated after tracking: [{t, x, y, w, h}]
     }
   ]
-  // compositions[] được gen bởi whipIt() hoặc agent gọi applyComposition()
-  // Pixi renderer đọc compositions[] và render frame-perfect theo timeline
 }
+```
+
+---
+
+## Composition types — đầy đủ
+
+| Type | Dùng cho | Data fields |
+|---|---|---|
+| `stat_reveal` | Số liệu lớn bay vào | `value`, `label`, `prefix`, `suffix` |
+| `section_card` | Full-screen chapter break | `title`, `subtitle`, `background` |
+| `kinetic_list` | Danh sách 2-5 items xuất hiện theo lời | `items[]`, `icon?` |
+| `lower_third` | Name tag, title dưới màn | `name`, `title`, `style` |
+| `callout_arrow` | Mũi tên chỉ vào object | `text`, `direction`, `maskId?` |
+| `quote_card` | Quote to nổi bật | `text`, `attribution?` |
+| `progress_bar` | Thanh tiến độ animated | `value`, `label`, `color` |
+| `broll_suggest` | Gợi ý b-roll (placeholder) | `visual_desc`, `duration` |
+| `logo_sting` | Logo fly-in | `assetId`, `position` |
+| `social_proof` | Follower/review count | `platform`, `count`, `style` |
+
+---
+
+## Blend modes — khi nào dùng cái nào
+
+| Mode | Dùng cho | Cách hoạt động |
+|---|---|---|
+| `normal` | Clip thông thường | Pixel trên đè pixel dưới theo opacity |
+| `screen` | Light leaks, glow overlay, lens flare | Sáng lên — đen = transparent |
+| `multiply` | Shadow overlay, dark vignette | Tối đi — trắng = transparent |
+| `overlay` | Texture, grain, film look | Sáng thêm sáng, tối thêm tối |
+| `add` | Neon glow, particle effects | Tổng pixel — rất sáng |
+| `soft_light` | Subtle color grade | Nhẹ hơn overlay |
+
+**⚠️ Hiện tại**: chỉ `normal` được render. Các mode khác = P0 blocker cho overlay/composite bất kỳ.
+
+---
+
+## Edge cases quan trọng trong schema
+
+### Speed ramp + caption sync
+```jsonc
+// Clip có speed ramp 0.5x tại t=10–12s
+// CaptionService phải stretch word timestamps theo factor:
+// word.start_timeline = clip.start + (word.srcIn - clip.in) / speedAt(word.srcIn)
+
+"speedKeys": [
+  { "t": 0, "speed": 1.0 },
+  { "t": 10.0, "speed": 0.5 },   // vào slow-mo
+  { "t": 12.0, "speed": 1.0 }    // ra slow-mo
+]
+// pitchLock: true → audio không bị pitch-down khi 0.5x
+```
+
+### Multi-speaker diarization
+```jsonc
+"speakerMap": {
+  "SPEAKER_00": { "color": "#fff",   "label": "Phong", "position": "bottom" },
+  "SPEAKER_01": { "color": "#7c6af7","label": "Guest", "position": "top" }
+}
+// blocks có speakerId → render position/color khác nhau
+// khi cắt clip: chỉ relink block cùng speakerId với audio segment tương ứng
+```
+
+### Asset hết frame (mask out of bounds)
+```jsonc
+"masks": [{
+  "id": "mask_001",
+  "outOfFramePolicy": "freeze",  // freeze | hide | extrapolate
+  // freeze: giữ bounding box cuối cùng trước khi ra frame
+  // hide: ẩn overlay khi mask ra frame
+  // extrapolate: tiếp tục theo velocity cuối
+}]
+```
+
+### B-roll compositing trên talking head
+```jsonc
+// Track overlay với blend = "normal", clip broll có opacity keyframe
+{
+  "id": "c_broll", "asset": "a_broll",
+  "blend": "normal",
+  "properties": {
+    "opacity": [
+      {"t":0,"v":0},
+      {"t":0.3,"v":0.85},    // fade in đến 85% opacity → vẫn thấy speaker mờ
+      {"t":8.7,"v":0.85},
+      {"t":9.0,"v":0}
+    ]
+  }
+}
+```
+
+### Import SRT (captions có sẵn)
+```jsonc
+// SRT asset import → parse → fill captionTrack.blocks[]
+// word-level timing không có từ SRT → set words = [{w: full_text, start, end}]
+// SmartLink vẫn hoạt động: srcAsset + srcIn được set theo transcript offset
 ```
 
 ---
@@ -134,73 +380,38 @@ RAM client**, không phải Postgres. Lý do ở [Kiến trúc](./whip-architect
 ```ts
 type Keyframe<V> = {
   t: number;                              // giây
-  v: V;                                   // value (number | [x,y] | color…)
-  ease: "smooth" | "linear" | "hold" | [number,number,number,number];  // tên hoặc cubic-bezier
-  source?: "manual" | "behavior:<id>";    // generated bởi behavior hay đặt tay
+  v: V;                                   // number | [x,y] | color string
+  ease: "smooth" | "linear" | "hold"
+      | "expo_out" | "expo_in" | "snappy_back"
+      | [number,number,number,number];    // cubic-bezier tùy chỉnh
+  source?: "manual" | `behavior:${string}`;  // manual = user tay; behavior = compiled
+};
+
+// Properties keyframe-able trên clip:
+type AnimatableProps = {
+  scale: number;
+  position: [x: number, y: number];      // normalized 0..1 từ center
+  rotation: number;                       // degrees
+  opacity: number;                        // 0..1
+  crop: [top, right, bottom, left];      // normalized 0..1
+  // effect params (nếu effect support keyframe):
+  "filmGrain.amount": number;
+  "rgbSplit.offset": number;
+  "bloom.intensity": number;
+  "colorCorrect.saturation": number;
+  // ... mỗi effect param có thể keyframe nếu định nghĩa là array
 };
 ```
 
-**Interpolator** đi qua mọi track tại time `t`, lerp từng property theo bezier của keyframe.
-
-> ⚠️ **Phần lớn keyframe KHÔNG đặt tay** — chúng được **sinh ra** bởi [Behaviors](./whip-behaviors.md)
-> (bind vào nội dung lời nói), đánh dấu `source: "behavior:<id>"`. Bạn chỉ chạm keyframe tay khi
-> "bake" để tinh chỉnh. Đây là khác biệt lõi với AE — xem [Smart Animation](./whip-behaviors.md).
-
----
-
-## Anchors & Behaviors (tầng smart trên keyframe)
-
-Hai field top-level nữa, là **source of truth thật** cho animation (keyframe chỉ là output compiled):
-
-```jsonc
-"anchors": {
-  "regions": [ { "id":"r_chart", "label":"nói về graph",
-                 "start":12.4, "end":18.9, "source":"transcript:revenue chart" } ],
-  "cues":    [ { "id":"cue_emph_3", "t":24.1, "kind":"emphasis" } ]
-},
-"behaviors": [
-  { "id":"b1", "type":"zoomToRegion", "target":"c1", "bind":"r_chart",
-    "params":{ "amount":1.15, "releaseAfter":true } }
-]
-```
-
-→ `anchors.start/end` derive từ transcript; behavior bám anchor; compiler sinh keyframe.
-Trim clip → recompile → animation tự dời. Chi tiết: [Smart Animation](./whip-behaviors.md).
-
----
-
-## Preset = template keyframe có tham số
-
-```jsonc
-"smoothZoomIn": {
-  "scale": [ {"t":0,"v":1.0,"ease":[0.16,1,0.3,1]},
-             {"t":"$dur","v":"$amount"} ]
-}
-```
-
-CapCut-fast = "apply `smoothZoomIn(amount=1.12, dur=0.6)` vào clip c1" — **một command**.
-Đây là cơ chế biến "keyframe tay đau" thành "một dòng". Danh sách preset ở [Tính năng](./whip-features.md).
-
----
-
-## Blend mode — schema có, renderer đang implement
-
-`clip.blend` đã có trong schema (`"blend": "normal"`). Các mode mục tiêu:
-
-```ts
-type BlendMode = "normal" | "multiply" | "screen" | "overlay" | "add" | "soft_light" | "hard_light"
-```
-
-- **Hiện tại**: chỉ `"normal"` được render — các mode khác bị ignore (P0 blocker)
-- **V1 target**: PixiJS hỗ trợ đầy đủ blend mode — chỉ cần wire vào compositor per-clip
-- **Tại sao quan trọng**: mọi overlay/composite (light leak, broll trên talking head, graphic layer) đều cần blend mode
+> ⚠️ **Phần lớn keyframe KHÔNG đặt tay** — chúng được sinh ra bởi [Behaviors](./whip-behaviors.md).
+> Bạn chỉ chạm keyframe tay khi "bake" để tinh chỉnh. Đây là khác biệt lõi với AE.
 
 ---
 
 ## Tại sao JSON khai báo, không phải code?
 
-- **Agent sửa được an toàn** — data có schema, không exec code tùy ý (khác Remotion).
-- **Diff-able** — mỗi edit của agent là một diff review được, undo được.
-- **Portable** — `.whip` + folder `assets/`, git được, share được.
-- **Một schema, ba consumer** — UI render, agent mutate, engine đọc. Cùng triết lý
-  "[một parameter_schema → REST + MCP + UI](./ontology-kinetic.md)" của Ontos.
+- **Agent sửa an toàn** — data có schema, không exec code tùy ý (khác Remotion).
+- **Diff-able** — mỗi edit của agent là 1 diff review được, undo được.
+- **Portable** — `.whip` + `assets/`, git-able, sharable.
+- **Một schema, ba consumer** — UI render, agent mutate, engine đọc.
+  Cùng triết lý "[1 parameter_schema → REST + MCP + UI](./ontology-kinetic.md)" của Ontos.
