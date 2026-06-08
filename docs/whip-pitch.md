@@ -87,7 +87,7 @@ sidebar_position: 6
 
 | Loại hình | Phù hợp khi | Ưu điểm | Nhược điểm |
 |---|---|---|---|
-| **Hộ kinh doanh** | 1 người, doanh thu nhỏ (<10 tỷ/năm), không cần phát hành cổ phần | Đơn giản nhất, ít thủ tục, thuế khoán | Không nhận được đầu tư VC, không phát hành cổ phần |
+| **Hộ kinh doanh** | 1 người, doanh thu nhỏ (&lt;10 tỷ/năm), không cần phát hành cổ phần | Đơn giản nhất, ít thủ tục, thuế khoán | Không nhận được đầu tư VC, không phát hành cổ phần |
 | **Công ty TNHH 1TV** | 1 sáng lập, muốn nhận đầu tư sau | Linh hoạt, ít cổ đông | Khó convert sang Cổ phần sau |
 | **Công ty TNHH 2TV+** | 2+ founder, seed stage | Đơn giản hơn CP, phù hợp sớm | Giới hạn 50 thành viên |
 | **Công ty Cổ phần** | Cần gọi vốn VC/angel | Phát hành cổ phiếu, dễ nhận đầu tư | Phức tạp hơn, cần ≥3 cổ đông |
