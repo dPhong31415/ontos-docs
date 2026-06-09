@@ -17,20 +17,20 @@ sidebar_position: 8
 
 | Tính năng | **Whip** | Descript | CapCut Web | Adobe Premiere |
 |---|---|---|---|---|
-| **State model** | Semantic graph | Text-centric | Mảng timestamp | Mảng timestamp |
-| **Video processing** | Local WebCodecs | Server upload | Local WebAssembly | CPU local |
-| **Transcription** | Whisper ONNX local ($0) | OpenAI API (cloud) | Server-side | Sensei cloud |
-| **Visual AI** | MediaPipe local ($0) | ❌ | Server ByteDance | Sensei cloud |
-| **Semantic understanding** | Cross-modal (A+V+C) | Text only | Template preset | ❌ |
-| **Agent / MCP** | ✅ semantic (word_id) | ❌ | ❌ | UI automation fragile |
-| **Cut invariance** | ✅ Word-ID anchored | Partial (text) | ❌ | ❌ |
-| **Creator style learning** | ✅ Style Graph | ❌ | ❌ | ❌ |
-| **Open vocab behaviors** | ✅ LLM-generated | ❌ | ❌ | ❌ |
-| **Video programming** | ✅ Whip Script | ❌ | ❌ | ❌ |
-| **Privacy (video local)** | ✅ | ❌ upload | ❌ ByteDance | Partial |
-| **File size limit** | Không giới hạn | Upload limit | Upload limit | RAM limit |
-| **AI cost / 30 phút** | ~$0.03 | ~$5 | ~$5 | N/A |
-| **Web-native** | ✅ | ✅ | ✅ | ❌ desktop |
+| **Mô hình dữ liệu** | Semantic graph | Dựa trên transcript | Mảng timestamp | Mảng timestamp |
+| **Xử lý video** | WebCodecs local | Upload server | WebAssembly local | CPU local |
+| **Phiên âm** | Whisper ONNX local ($0) | OpenAI API (cloud) | Server ByteDance | Sensei cloud |
+| **AI nhận diện hình ảnh** | MediaPipe local ($0) | ❌ | Server ByteDance | Sensei cloud |
+| **Hiểu ngữ nghĩa** | Đa phương thức (âm thanh+hình+caption) | Chỉ văn bản | Template có sẵn | ❌ |
+| **Agent / MCP** | ✅ semantic (word_id) | ❌ | ❌ | Tự động hóa UI (fragile) |
+| **Bất biến khi cắt** | ✅ Anchored vào Word-ID | Partial (text) | ❌ | ❌ |
+| **Học phong cách creator** | ✅ Style Graph | ❌ | ❌ | ❌ |
+| **Behavior tự sinh** | ✅ LLM tạo intent | ❌ | ❌ | ❌ |
+| **Lập trình video** | ✅ Whip Script | ❌ | ❌ | ❌ |
+| **Bảo mật (video ở máy)** | ✅ | ❌ upload | ❌ ByteDance | Partial |
+| **Giới hạn dung lượng** | Không giới hạn (OPFS) | Giới hạn upload | Giới hạn upload | Giới hạn RAM |
+| **Chi phí AI / 30 phút** | ~$0.03 | ~$5 | ~$5 | N/A |
+| **Chạy trên web** | ✅ | ✅ | ✅ | ❌ desktop |
 | **Giá** | Free + $30/tháng | $24–$40/tháng | Free + $8/tháng | $600+/năm |
 
 ### Nhóm Pro Desktop — Whip vs After Effects + DaVinci
@@ -39,46 +39,46 @@ sidebar_position: 8
 
 | Tính năng | **Whip** | After Effects | DaVinci Resolve |
 |---|---|---|---|
-| **Mục đích cốt lõi** | AI-native editing + behaviors | Motion graphics + VFX compositing | Color grading + NLE + Fusion VFX |
-| **State model** | Semantic graph | Layer/composition mảng thời gian | Mảng timestamp + Color node graph |
-| **Keyframe model** | Behavior-generated (semantic) | Tay 100% — expression scripting | Tay 100% hoặc Fusion node |
-| **Animation system** | Intent-driven (LLM generates) | Expression + script (JSX/JSXBIN) | Fusion node graph + keyframe |
+| **Mục đích cốt lõi** | Editing AI-native + behaviors | Motion graphics + VFX compositing | Color grading + NLE + Fusion VFX |
+| **Mô hình dữ liệu** | Semantic graph | Layer/composition mảng thời gian | Mảng timestamp + Color node graph |
+| **Mô hình keyframe** | Tự sinh từ intent (semantic) | Tay 100% — expression scripting | Tay 100% hoặc Fusion node |
+| **Hệ thống animation** | Intent-driven (LLM tạo) | Expression + script (JSX/JSXBIN) | Fusion node graph + keyframe |
 | **AI / ML tích hợp** | Local-first (MediaPipe, Whisper) | Rotobrush 3.0 (AI rotoscope) | Magic Mask, Speed Warp, Voice Isolation |
-| **Transcription / caption** | ✅ Whisper local | ❌ | ✅ (built-in, local) |
-| **Semantic understanding** | ✅ Cross-modal | ❌ | ❌ |
+| **Phiên âm / caption** | ✅ Whisper local | ❌ | ✅ (built-in, local) |
+| **Hiểu ngữ nghĩa** | ✅ Đa phương thức | ❌ | ❌ |
 | **Agent / MCP** | ✅ | ❌ | ❌ |
-| **Cut invariance** | ✅ Word-ID anchored | ❌ | ❌ |
-| **Creator style learning** | ✅ Style Graph | ❌ | ❌ |
-| **Video programming** | ✅ Whip Script | Partial (ExtendScript/JSX) | Partial (Fusion scripting/Lua) |
-| **Web-native** | ✅ | ❌ desktop | ❌ desktop |
-| **GPU render** | WebGPU (browser) | CPU+GPU (Metal/CUDA) | GPU-heavy (CUDA/Metal/OpenCL) |
-| **File size limit** | Không giới hạn (OPFS) | RAM limit (~32GB) | RAM limit |
-| **Color grading** | Cơ bản (LUT + color node) | Cơ bản | ✅ best-in-class |
-| **Motion graphics** | Overlay + behaviors | ✅ best-in-class | Fusion (complex) |
+| **Bất biến khi cắt** | ✅ Anchored vào Word-ID | ❌ | ❌ |
+| **Học phong cách creator** | ✅ Style Graph | ❌ | ❌ |
+| **Lập trình video** | ✅ Whip Script | Partial (ExtendScript/JSX) | Partial (Fusion/Lua) |
+| **Chạy trên web** | ✅ | ❌ desktop | ❌ desktop |
+| **Render GPU** | WebGPU (browser) | CPU+GPU (Metal/CUDA) | GPU nặng (CUDA/Metal/OpenCL) |
+| **Giới hạn dung lượng** | Không giới hạn (OPFS) | Giới hạn RAM (~32GB) | Giới hạn RAM |
+| **Color grading** | Cơ bản (LUT + color node) | Cơ bản | ✅ tốt nhất thị trường |
+| **Motion graphics** | Overlay + behaviors | ✅ tốt nhất thị trường | Fusion (phức tạp) |
 | **Giá** | Free + $30/tháng | $600+/năm (CC) | Free / $295 Studio |
-| **Target user** | Creator, marketer, short-form | Motion designer, VFX artist | Colorist, film editor, broadcast |
+| **Đối tượng dùng** | Creator, marketer, short-form | Motion designer, VFX artist | Colorist, film editor, broadcast |
 
 **Điểm mấu chốt:**
 - **AE thắng** ở motion graphics phức tạp, VFX compositing, expression scripting — Whip không cạnh tranh ở đây
 - **DaVinci thắng** ở color grading broadcast-grade, Fusion VFX — Whip không cạnh tranh ở đây
-- **Whip thắng** ở: semantic understanding, AI behavior, agent/MCP, web-native, creator workflow speed
+- **Whip thắng** ở: hiểu ngữ nghĩa, AI behavior, agent/MCP, chạy web, tốc độ workflow creator
 - Creator dùng AE 4 tiếng để keyframe tay những gì Whip tự generate trong 30 giây → **đây là migration story**
 
 ### Nhóm AI Tool — Whip vs tool chuyên biệt + infrastructure
 
 | Tính năng | **Whip** | VideoEdit MCP | OpusClip | TwelveLabs | Runway ML |
 |---|---|---|---|---|---|
-| **State model** | Semantic graph | Timecode-based | Không có | Video embedding | Không có |
+| **Mô hình dữ liệu** | Semantic graph | Dựa trên timecode | Không có | Video embedding | Không có |
 | **Timeline editor** | ✅ | ✅ | ❌ | ❌ | ❌ |
 | **Agent / MCP** | ✅ semantic (word_id) | ✅ timecode | ❌ | REST API | ❌ |
-| **Visual AI** | MediaPipe local ($0) | ❌ | Face track only | Pegasus cloud | ❌ |
-| **Semantic understanding** | Cross-modal (A+V+C) | ❌ | Scoring only | Video embedding | ❌ |
-| **Cut invariance** | ✅ Word-ID anchored | ❌ | N/A | N/A | N/A |
-| **Creator style learning** | ✅ Style Graph | ❌ | ❌ | ❌ | ❌ |
-| **Video generation** | Planned (gọi API) | ❌ | ❌ | ❌ | ✅ best-in-class |
-| **Headless / batch** | ✅ Whip Script | Partial | ❌ | ✅ API | ❌ |
-| **Privacy (video local)** | ✅ | ✅ | ❌ upload | ❌ upload | ❌ upload |
-| **AI cost / 30 phút** | ~$0.03 | $0 | ~$3 | $12 | N/A |
+| **AI nhận diện hình ảnh** | MediaPipe local ($0) | ❌ | Face track cơ bản | Pegasus cloud | ❌ |
+| **Hiểu ngữ nghĩa** | Đa phương thức (A+V+C) | ❌ | Chỉ scoring | Video embedding | ❌ |
+| **Bất biến khi cắt** | ✅ Anchored vào Word-ID | ❌ | N/A | N/A | N/A |
+| **Học phong cách creator** | ✅ Style Graph | ❌ | ❌ | ❌ | ❌ |
+| **Sinh video** | Planned (gọi API) | ❌ | ❌ | ❌ | ✅ tốt nhất thị trường |
+| **Render headless / batch** | ✅ Whip Script | Partial | ❌ | ✅ API | ❌ |
+| **Bảo mật (video ở máy)** | ✅ | ✅ | ❌ upload | ❌ upload | ❌ upload |
+| **Chi phí AI / 30 phút** | ~$0.03 | $0 | ~$3 | $12 | N/A |
 | **Giá** | Free + $30/tháng | Chưa rõ | $29–$149/tháng | $0.10/phút | $12–$76/tháng |
 
 **Ký hiệu:** ✅ có / ❌ không / Partial / N/A
@@ -107,16 +107,16 @@ sidebar_position: 8
 
 **Funding:** ~$100M+ raised, định giá ~$500M (2022). Tăng trưởng đang chậm lại.
 
-| Chiều | Descript | Whip |
+| Tiêu chí | Descript | Whip |
 |---|---|---|
-| Semantic model | Text transcript | Audio + Visual + Caption cross-modal |
-| Visual AI | ❌ không có | ✅ MediaPipe local |
-| Agent interface | ❌ không | ✅ MCP semantic |
-| Cut invariance | Partial (text align) | ✅ word_id anchored |
-| Creator learning | ❌ | ✅ Style Graph |
-| Privacy | ❌ upload cloud | ✅ local |
-| Content type | Podcast / talking-head only | Mọi loại video |
-| AI cost/30 phút | ~$5 | ~$0.03 |
+| Mô hình ngữ nghĩa | Chỉ transcript văn bản | Âm thanh + Hình ảnh + Caption đa phương thức |
+| AI nhận diện hình ảnh | ❌ | ✅ MediaPipe local |
+| Giao diện agent | ❌ | ✅ MCP semantic |
+| Bất biến khi cắt | Partial (text) | ✅ word_id anchored |
+| Học phong cách creator | ❌ | ✅ Style Graph |
+| Bảo mật video | ❌ upload cloud | ✅ không rời máy |
+| Loại nội dung | Chỉ podcast / talking-head | Mọi loại video |
+| Chi phí AI / 30 phút | ~$5 | ~$0.03 |
 
 **Verdict:** Whip thắng Descript về visual semantic depth + cross-modal. Descript thắng về UX maturity hiện tại và B2B podcast market.
 
@@ -143,17 +143,17 @@ sidebar_position: 8
 
 **Funding:** Subsidiary của ByteDance. Runway vô hạn nhưng ceiling pháp lý.
 
-| Chiều | CapCut Web | Whip |
+| Tiêu chí | CapCut Web | Whip |
 |---|---|---|
-| Rendering pipeline | ✅ WebAssembly rất solid | ✅ WebCodecs + WebGPU |
-| AI understanding | ❌ server-side ByteDance | ✅ local MediaPipe + Whisper |
-| Privacy | ❌ video lên China server | ✅ không rời máy |
-| Semantic graph | ❌ | ✅ OntologyGraph |
-| Creator learning | ❌ | ✅ Style Graph |
+| Pipeline render | ✅ WebAssembly rất solid | ✅ WebCodecs + WebGPU |
+| Hiểu ngữ nghĩa AI | ❌ server-side ByteDance | ✅ MediaPipe + Whisper local |
+| Bảo mật video | ❌ lên server Trung Quốc | ✅ không rời máy |
+| Đồ thị ngữ nghĩa | ❌ | ✅ OntologyGraph |
+| Học phong cách creator | ❌ | ✅ Style Graph |
 | Agent / MCP | ❌ | ✅ |
-| Western enterprise | ❌ trust issue | ✅ |
-| Distribution | ✅ 1B+ user TikTok | Cần build |
-| Video generation tích hợp | ✅ Seedance 2.0 | Planned (gọi API) |
+| Tin cậy enterprise phương Tây | ❌ vấn đề ByteDance | ✅ |
+| Phân phối người dùng | ✅ 1B+ user qua TikTok | Cần xây dựng |
+| Sinh video tích hợp | ✅ Seedance 2.0 | Planned (gọi API) |
 | Giá | Free + $8/tháng | Free + $30/tháng |
 
 **Verdict:** CapCut Web là đối thủ kỹ thuật mạnh nhất về rendering pipeline. Whip thắng về privacy + semantic depth + Western market trust. **ByteDance ownership là vulnerability chết người ở US/EU — đây là cơ hội cho Whip.**
@@ -181,19 +181,19 @@ sidebar_position: 8
 - Firefly Video quality thua Runway/Kling 12–18 tháng.
 - $600+/năm vs CapCut/Whip free.
 
-| Chiều | Adobe Premiere | Whip |
+| Tiêu chí | Adobe Premiere | Whip |
 |---|---|---|
-| State model | C++ monolith 30 năm | Semantic graph |
-| AI inference | ❌ cloud round-trip | ✅ local |
-| Agent interface | UI automation fragile | ✅ MCP semantic |
-| Semantic understanding | ❌ | ✅ |
-| Creator learning | ❌ | ✅ |
-| Offline / privacy | Partial (render local) | ✅ hoàn toàn |
-| Generative features | ✅ Firefly (cloud, chậm) | Planned |
-| Pro plugin ecosystem | ✅ 30 năm | Chưa có |
-| Enterprise contracts | ✅ dominant | Chưa có |
+| Mô hình dữ liệu | C++ monolith 30 năm tuổi | Semantic graph |
+| Suy luận AI | ❌ cloud round-trip | ✅ local |
+| Giao diện agent | Tự động hóa UI (không ổn định) | ✅ MCP semantic |
+| Hiểu ngữ nghĩa | ❌ | ✅ |
+| Học phong cách creator | ❌ | ✅ |
+| Offline / bảo mật | Partial (render local) | ✅ hoàn toàn |
+| Tính năng sinh nội dung | ✅ Firefly (cloud, chậm) | Planned |
+| Hệ sinh thái plugin pro | ✅ 30 năm | Chưa có |
+| Hợp đồng enterprise | ✅ dominant | Chưa có |
 | Giá | $600+/năm | Free + $30/tháng |
-| Web-native | ❌ desktop | ✅ |
+| Chạy trên web | ❌ desktop | ✅ |
 
 **Verdict:** Adobe mất market share vào AI-native tools mỗi quý. Enterprise moat bền nhưng ceiling có hạn. Whip không cần đánh Adobe ở pro post — thắng creator economy là đủ.
 
@@ -215,15 +215,15 @@ sidebar_position: 8
 - **Không phải editor.** Không timeline, không audio sync, không caption, không semantic understanding về footage sẵn có.
 - $12–$76/tháng, generation credits hết nhanh.
 
-| Chiều | Runway ML | Whip |
+| Tiêu chí | Runway ML | Whip |
 |---|---|---|
-| Mục đích cốt lõi | Generate footage mới | Edit footage có sẵn |
+| Mục đích cốt lõi | Tạo footage mới từ đầu | Chỉnh sửa footage có sẵn |
 | Timeline / NLE | ❌ | ✅ |
-| Audio sync | ❌ | ✅ |
-| Semantic understanding | ❌ | ✅ |
-| Video generation | ✅ Gen-4 best-in-class | Gọi API (supplier) |
+| Đồng bộ âm thanh | ❌ | ✅ |
+| Hiểu ngữ nghĩa | ❌ | ✅ |
+| Sinh video | ✅ Gen-4 tốt nhất thị trường | Gọi API (dùng như supplier) |
 | Giá | $12–$76/tháng | Free + $30/tháng |
-| Target user | Filmmaker, VFX, creative | Creator, marketer, editor |
+| Đối tượng dùng | Filmmaker, VFX artist | Creator, marketer, editor |
 
 **Verdict:** Runway không phải đối thủ trực tiếp — use case khác. Runway generate footage mới; Whip edit footage có sẵn. Dài hạn hai cái converge nhưng Runway trở thành supplier của Whip (`generate_asset()` call), không phải competitor.
 
@@ -247,16 +247,16 @@ sidebar_position: 8
 - Không semantic graph, không creator learning, không behaviors.
 - Dễ commoditize — ASR + face track + ranking bất kỳ ai cũng build được.
 
-| Chiều | OpusClip | Whip |
+| Tiêu chí | OpusClip | Whip |
 |---|---|---|
-| Output | Clips cắt sẵn | Timeline có thể edit tiếp |
-| Timeline editor | ❌ | ✅ |
-| Visual AI | Face track basic | ✅ MediaPipe full body |
-| Semantic graph | ❌ | ✅ |
-| Behaviors / effects | ❌ | ✅ |
-| Creator learning | ❌ | ✅ |
-| Viral scoring | ✅ (LLM inference) | Planned |
-| Privacy | ❌ upload | ✅ local |
+| Đầu ra | Clips cắt sẵn | Timeline có thể chỉnh tiếp |
+| Trình chỉnh timeline | ❌ | ✅ |
+| AI nhận diện hình ảnh | Nhận diện mặt cơ bản | ✅ MediaPipe toàn thân |
+| Đồ thị ngữ nghĩa | ❌ | ✅ |
+| Behaviors / hiệu ứng | ❌ | ✅ |
+| Học phong cách creator | ❌ | ✅ |
+| Chấm điểm viral | ✅ (LLM inference) | Planned |
+| Bảo mật video | ❌ upload | ✅ không rời máy |
 | Giá | $29–$149/tháng | Free + $30/tháng |
 
 **Verdict:** OpusClip là tool B2 (Basic + Boring). User dùng xong sẽ graduate lên Whip.
@@ -289,15 +289,15 @@ sidebar_position: 8
 
 **Weakness thật:** Video phải upload. $12/30 phút indexing. Privacy non-starter.
 
-| Chiều | TwelveLabs | Whip |
+| Tiêu chí | TwelveLabs | Whip |
 |---|---|---|
-| Video understanding | ✅ best-in-class cloud | Local (lighter model) |
-| Privacy | ❌ upload bắt buộc | ✅ không rời máy |
-| Cost/30 phút | $12 | $0.03 |
-| Timeline editor | ❌ | ✅ |
-| Agent interface | REST API | ✅ MCP semantic |
-| Semantic search qua footage dài | ✅ | Planned V2 |
-| Target user | Developer / enterprise | Creator + developer |
+| Hiểu nội dung video | ✅ tốt nhất (cloud) | Local (model nhẹ hơn) |
+| Bảo mật video | ❌ bắt buộc upload | ✅ không rời máy |
+| Chi phí / 30 phút | $12 | $0.03 |
+| Trình chỉnh timeline | ❌ | ✅ |
+| Giao diện agent | REST API | ✅ MCP semantic |
+| Tìm kiếm ngữ nghĩa footage dài | ✅ | Planned V2 |
+| Đối tượng dùng | Developer / enterprise | Creator + developer |
 
 **Verdict:** TwelveLabs là cloud version của những gì Whip làm local. **Whip $0.03/30 phút vs TwelveLabs $12/30 phút = 400× cheaper. Cùng accuracy? Chưa — TwelveLabs dùng model lớn hơn. Nhưng Whip V2 (on-device VLM) sẽ close gap.**
 
@@ -314,18 +314,18 @@ sidebar_position: 8
 - Agent biết "cắt tại giây 14.2" nhưng không biết "cắt sau câu vừa rồi".
 - Không cross-modal signals, không creator style learning, không cut-invariant behaviors.
 
-| Chiều | VideoEdit MCP | Whip MCP |
+| Tiêu chí | VideoEdit MCP | Whip MCP |
 |---|---|---|
-| Interface | MCP | MCP |
-| Abstraction level | Timecode (`t=14.2`) | Semantic (`wordId="w_3f8a"`) |
-| Semantic graph | ❌ | ✅ OntologyGraph |
-| Word-ID anchoring | ❌ | ✅ |
-| Cross-modal signals | ❌ | ✅ audio + visual |
-| Creator style learning | ❌ | ✅ |
-| Cut invariance | ❌ | ✅ |
-| Open vocab behaviors | ❌ | ✅ LLM-generated |
+| Giao thức | MCP | MCP |
+| Mức độ trừu tượng | Timecode (`t=14.2`) | Ngữ nghĩa (`wordId="w_3f8a"`) |
+| Đồ thị ngữ nghĩa | ❌ | ✅ OntologyGraph |
+| Anchor vào Word-ID | ❌ | ✅ |
+| Tín hiệu đa phương thức | ❌ | ✅ âm thanh + hình ảnh |
+| Học phong cách creator | ❌ | ✅ |
+| Bất biến khi cắt | ❌ | ✅ |
+| Behavior từ vựng mở | ❌ | ✅ LLM tạo intent |
 | Progressive disclosure | ✅ | ✅ |
-| File privacy | ✅ local | ✅ local |
+| Bảo mật file | ✅ local | ✅ local |
 
 **Verdict:** VideoEdit MCP là comparison point rõ nhất cho Whip MCP. **Cùng interface (MCP), khác abstraction level hoàn toàn: timecode vs semantic.** Đây là gap Whip cần demo cụ thể.
 
