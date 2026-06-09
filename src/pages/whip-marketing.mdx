@@ -10,34 +10,44 @@
 
 ---
 
-## 5 Điểm Khác Biệt Cốt Lõi
+## 5 Moat — Điểm Khác Biệt Cốt Lõi
 
-Đây là 5 thứ không đối thủ nào có — dùng làm anchor cho mọi nội dung marketing:
+Đây là 5 thứ không đối thủ nào có — mỗi moat là lý do kiến trúc, không phải feature bề mặt:
 
-### 1. Animation không bao giờ vỡ
-Hiệu ứng trong Whip bám vào **nội dung semantic** — từng từ, từng cử chỉ, từng biểu cảm — không bám vào giây cụ thể. Cắt clip, đảo thứ tự, sửa lại câu → animation tự theo. Không bao giờ phải sửa tay lại.
+### Moat 1 — Semantic Temporal Graph
+Premiere, CapCut, DaVinci lưu video như mảng timestamp. Zoom tại giây 12.4s và subtitle cùng giây đó là hai thứ **không có quan hệ gì** trong data. Cắt → vỡ. Đây là vấn đề 30 năm của After Effects.
 
-> *Dùng cho:* so sánh với AE/Premiere, demo video, hook ngắn
+Whip lưu video như **đồ thị ngữ nghĩa**: mỗi từ, cử chỉ, biểu cảm đều có ID ổn định. Behaviors anchor vào ID đó — không phải vào timestamp. Cắt 10 từ → behaviors tự recompute, không vỡ. Adobe cần rebuild lại toàn bộ C++ monolith mới làm được điều này.
 
-### 2. AI hiểu video thật sự — không phải preset
-Whip phân tích đồng thời giọng nói, biểu cảm khuôn mặt, và cử chỉ từng khoảnh khắc. Hiệu ứng sinh ra từ nội dung thật, không phải từ danh sách template cố định. Cùng một đoạn "cao trào" nhưng mỗi creator sẽ có kết quả khác nhau.
+> *Demo:* cắt audio → AE vỡ vs Whip giữ nguyên
 
-> *Dùng cho:* so sánh với CapCut, Descript, mọi "AI editor" hiện tại
+### Moat 2 — Local Dense Signal Extraction
+Mọi AI editor hiện tại: upload video lên cloud → server xử lý → download kết quả. TwelveLabs (tốt nhất hiện tại): $12/30 phút.
 
-### 3. Video có thể lập trình — AI agent native
-Whip là editor duy nhất có ngôn ngữ lập trình riêng. AI agent có thể viết script → Whip tự động edit toàn bộ video. "Brief → viral clip" không cần con người chạm vào timeline.
+Whip extract tất cả signals ngay trên máy, 1 lần khi import: phiên âm từng từ, biểu cảm khuôn mặt, nhận diện cử chỉ, phân tích chuyển động — toàn bộ được cache vào đồ thị semantic. Chi phí: $0. Video không upload đi đâu. File 50GB không load vào RAM.
 
-> *Dùng cho:* B2B, developer, agency, pitch VC/YC
+> *Demo:* import 30 phút video, xem ingestion chạy local
 
-### 4. Càng dùng càng thông minh
-Whip học phong cách chỉnh sửa của creator qua từng dự án — nhịp cắt, cường độ zoom, phong cách caption... Dự án sau tự áp dụng. Không tool nào khác có cái này.
+### Moat 3 — Semantic MCP + Whip Script
+Các AI editor khác là **pipeline**: upload → chờ → download preset. Agent không điều khiển được thật sự.
 
-> *Dùng cho:* retention story, long-term value, "tool hiểu bạn"
+Whip có MCP layer và ngôn ngữ lập trình cho video (Whip Script). Agent điều khiển qua **semantic intent** (cắt sau câu X, thêm zoom khi gesture "pointing") — không phải timecode. Input là code, output là video. Developer và AI agent có thể build tool mới trên nền Whip.
 
-### 5. Không giới hạn file, UI không bao giờ đơ
-File 4K 50GB chạy mượt trên web. AI đang xử lý nền trong khi creator vẫn edit bình thường — không bao giờ chờ, không bao giờ lag.
+> *Demo:* Claude viết Whip Script → chạy headless → ra 5 format platform
 
-> *Dùng cho:* so sánh trải nghiệm với CapCut web, Descript
+### Moat 4 — Creator Style Graph
+Lock-in của CapCut/Premiere = định dạng file. Creator export video là xong — không mang được gì.
+
+Whip học **phong cách editing** của creator qua từng dự án: nhịp cắt, cường độ zoom, cách highlight caption, cấu trúc energy. Mỗi project update dữ liệu này. Project sau tự áp dụng, ngày càng ít cần chỉnh lại. Data này không export được sang tool khác.
+
+> *Demo:* project thứ 5 tự match style của creator từ 4 project trước
+
+### Moat 5 — 5-Thread Architecture
+Browser thông thường: 1 thread xử lý tất cả — UI, AI, render. 1 tác vụ nặng → UI đơ. CapCut web lag khi cắt video dài. Descript đơ khi AI đang xử lý.
+
+Whip chạy 5 luồng hoàn toàn độc lập: UI, state, render, ingestion, AI. AI đang phân tích 30 phút video phía sau — creator kéo keyframe vẫn mượt 60fps. Export đang chạy — timeline scrub vẫn instant.
+
+> *Demo:* bật ingestion + edit cùng lúc, quan sát framerate
 
 ---
 
