@@ -7,291 +7,260 @@ sidebar_position: 6
 
 # MCP & Agent Skills
 
-> Cái làm Whip "agentic": [Command API](./whip-api.md) expose ra thành **MCP tools**.
-> Agent đọc project, gọi command, engine cập nhật — không phải chat, là **execute**.
-> Cover 2 use case: production complex (thay AE) và short-form viral (thay CapCut).
+> Cái làm Whip "agentic": agent không *gợi ý* — agent *thực thi* trực tiếp trên semantic layer.
+> Không phải "AI click thay user". Là "AI hiểu video và ra quyết định editorial như editor người thật".
 
 ---
 
-## MCP server = Command registry auto-gen
+## Kiến Trúc Agent — SOTA 2026 (Anthropic Multi-Agent Pattern)
 
 ```
-command registry (zod schema)
-        │
-        ├─→ TS types        (GUI autocomplete)
-        ├─→ JSON schema     ──▶  MCP tool list
-        └─→ command bus          (1 command = 1 tool, schema = input schema)
+┌─ MCP Server (SharedWorker — chạy trong browser) ──────────────────┐
+│  Tất cả tab Whip connect vào cùng 1 MCP session                   │
+│  Agent và user cùng nhìn 1 OntologyGraph, thay đổi realtime       │
+│                                                                    │
+│  Orchestrator Agent                                                │
+│      │                                                             │
+│      ├── Analyzer Agent                                            │
+│      │     Input: OntologyGraph slice (typed JSON, minimal)        │
+│      │     Tools: get_temporal_spans(), get_span_detail()          │
+│      │     Output: semantic understanding — readable, reviewable   │
+│      │                                                             │
+│      ├── Editor Agent                                              │
+│      │     Input: Analyzer output + Creator Style Graph            │
+│      │     Output: BehaviorNode[] với editorial intents            │
+│      │     Pattern: propose → evaluate → refine (self-iterate)     │
+│      │                                                             │
+│      └── Validator Agent                                           │
+│            Input: BehaviorNode[] + project constraints             │
+│            Output: approve / conflict flags / alternatives         │
+└────────────────────────────────────────────────────────────────────┘
 ```
 
-Thêm command → tự có MCP tool. Không maintain 2 nơi. Cùng triết lý
-"[1 schema → MCP + REST + UI](./ontology-kinetic.md)" của Ontos.
+**Không RAG.** Agent dùng typed tools query OntologyGraph. Data là structured, relationships là explicit — không cần vector similarity. Theo Karpathy pattern: `project.whip` JSON fit trong 200K context window; typed tools expose slice cho large projects.
 
 ---
 
-## Hai chế độ chạy
+## Hai Chế Độ Chạy
 
 ```
 ┌─ Chế độ A: Browser (live editing) ─────────────────────────────┐
 │  Whip đang mở → MCP server chạy trong SharedWorker             │
 │  Claude Code / agent attach qua stdio hoặc WebSocket           │
-│  → agent và user cùng nhìn 1 timeline, thay đổi realtime       │
+│  → agent và user cùng nhìn 1 OntologyGraph, thay đổi realtime  │
 └─────────────────────────────────────────────────────────────────┘
 
 ┌─ Chế độ B: Headless (batch / CI) ──────────────────────────────┐
 │  Engine chạy không UI (Node + headless WebCodecs/canvas)       │
-│  load .whip → commands → render() → xuất mp4                   │
-│  → "cắt 100 clip từ 100 transcript" hoàn toàn tự động          │
+│  load .whip → semantic actions → render() → mp4               │
+│  → "ingest + edit 100 video từ 100 transcript" tự động        │
 └─────────────────────────────────────────────────────────────────┘
 ```
 
 ---
 
-## Tool surface đầy đủ
+## Tool Surface — Semantic Actions (Không Phải UI Operations)
+
+### Tầng 1 — Summary (bắt đầu mọi agent session)
 
 ```
-# ── Đọc trạng thái (agent cần đọc trước khi làm) ─────────────────
-whip.get_project()
-  → project.whip hiện tại (đầy đủ)
-  
-whip.get_timeline_summary()
-  → { duration, trackCount, clips: [{id,label,start,end,hasCaption,hasBehavior}],
-      gaps: [{start,end}], totalSilence: number }
-  → KHÔNG dump toàn bộ JSON — tiết kiệm token
+whip.get_project_summary()
+  → { duration, spanCount, totalWords, hasVisualAnalysis,
+      creatorStyleId, ingestionStatus }
+  → Agent bắt đầu từ đây, không nhận full JSON
+
+whip.get_ingestion_status(assetId)
+  → { audio: "done" | "processing", visual: "done" | "processing",
+      wordsCount, visualEventsCount, behaviorsGenerated }
+```
+
+### Tầng 2 — Semantic Layer (agent drill down)
+
+```
+whip.get_temporal_spans({ range?, minEnergy?, type?, speaker? })
+  → TemporalSpan[] với audioSummary + visualSummary
+  → KHÔNG trả raw Word[] hay FaceEvent[] — chỉ summary
+  → { id, label, start, end, energy,
+      audioSummary: { pace, tone, keywords, dominantSpeaker },
+      visualSummary: { gesture, expression, motionIntensity } }
+
+whip.get_span_detail(spanId)
+  → words[], visualEvents[], existingBehaviors[], neighborSpans[]
+  → Chỉ gọi khi cần detail — không bao giờ gọi trước get_temporal_spans()
+
+whip.get_creator_style()
+  → CreatorStyleGraph: { cutRhythm, motionSignature, captionVoice, energyCurve }
+  → Agent dùng như prior khi synthesize behaviors
+```
+
+### Tầng 3 — Semantic Actions (agent thực thi)
+
+```
+whip.analyze_audio(assetId)
+  → trigger Ingestion Worker (audio pipeline)
+  → returns: { jobId } — async, poll get_ingestion_status()
+
+whip.analyze_visual(assetId)
+  → trigger Ingestion Worker (video pipeline: MediaPipe)
+  → returns: { jobId }
+
+whip.synthesize_behaviors(spanId, { creatorStyleId?, intent? })
+  → Editor Agent chạy: read span → generate BehaviorNode[]
+  → Agent self-iterate (propose → evaluate → refine)
+  → returns: { behaviors: BehaviorNode[], confidence: 0–1 }
+
+whip.cut_at_word(wordId)
+  → semantic cut: mark words[wordId...].visible = false
+  → propagate: update TemporalSpan, recompile active behaviors
+  → KHÔNG nhận timestamp — word_id stable, cut-proof
+
+whip.compile_render({ range? })
+  → compute RenderInstruction[] từ active BehaviorNodes
+  → returns: keyframe diff (không phải full state)
+
+whip.apply_creator_style(creatorStyleId?)
+  → calibrate tất cả BehaviorNodes theo Style Graph
+  → auto-adjust: zoom intensity, ease profile, caption energy
 
 whip.get_transcript(clipId)
-  → { blocks: [{text, start, end, speakerId, words:[]}] }
-  → dùng để phân tích nội dung trước khi ra quyết định
+  → { words: Word[], blocks: CaptionBlock[], speakers: Speaker[] }
+  → Agent dùng để hiểu nội dung trước khi synthesize
 
-whip.get_clip_detail(clipId)
-  → { asset, effects[], behaviors[], keyframes_summary, speed, blend }
+whip.validate_behaviors(behaviorIds[])
+  → Validator Agent: check conflicts, timing overlaps, style consistency
+  → returns: { valid: bool, issues: [], suggestions: [] }
+```
 
-# ── "Whip It" editorial pipeline (F11) ───────────────────────────
-whip.whip_it({ recipe? })
-  → trigger full AI editorial pipeline:
-    transcript → LLM Art Director → CompositionBrief
-    → asset gen (Seedream/Recraft) → RMBG → overlay → behaviors → animate
-  → recipe: "iman_editorial" | "hormozi_bold" | "ali_clean"
-             | "mrbeast_energy" | "gawx_cinematic"
-  → returns: { compositionsCreated: number, assetsGenerated: number }
+### Tầng 4 — Asset & Composition Actions
 
-whip.set_style_profile({ recipeId? } | { refVideoId? })
-  → extract StyleProfile từ 5 frames của reference video (vision LLM)
-  → hoặc set từ recipe preset
-
+```
 whip.generate_asset({ description, style?, type: "raster"|"vector" })
-  → Seedream 5.0 (raster) / Recraft (vector) + RMBG nếu raster
+  → Seedream 5.0 (raster) / Recraft (vector)
   → returns: { assetId, previewUrl }
 
 whip.remove_background(assetId)
-  → local RMBG WebGPU → transparent PNG
-  → returns: { assetId }  (asset mới, giữ original)
+  → RMBG WebGPU (local, $0)
+  → returns: { assetId }
 
-whip.magic_mask(clipId, { x, y, frameT? })
-  → SAM2 segment + track → returns { maskId }
-  → dùng maskId cho: pin_overlay_to_mask, replace_background, callout_arrow
+whip.magic_mask(clipId, { x, y, frameT })
+  → SAM2: segment + track
+  → returns: { maskId }
 
-whip.pin_overlay_to_mask(overlayClipId, maskId)
-  → overlay tự track theo mask bounding box qua toàn clip
+whip.apply_composition(compositionBrief[])
+  → apply CompositionBrief → create overlay clips với behaviors
 
-whip.replace_background(clipId, maskId, { replacement })
-  → replacement: "blur" | "#color" | { assetId }
-
-whip.apply_composition(compositionJson)
-  → apply CompositionBrief array vào timeline
-
-# ── Smart animation (tầng chính — bind motion vào nội dung) ──────
-whip.bind_region(clipId, { from, to, label? } | { transcript })
-whip.add_cue(clipId, { t, kind })
-whip.add_behavior(targetClipId, type, { bind, params })
-whip.set_behavior_param(behaviorId, key, value)
-whip.bake_behavior(behaviorId)
-
-# ── Timeline ──────────────────────────────────────────────────────
-whip.add_clip / split_clip / trim_clip / move_clip
-whip.ripple_delete / duplicate_clip / group_clips
-whip.reframe_for_aspect(clipId, aspect, { subject? })
-whip.reframe_project(aspect, { subject? })
-
-# ── Compositing (AE-level) ────────────────────────────────────────
-whip.set_blend_mode(clipId, mode)   # screen|multiply|overlay|add|soft_light
-whip.add_effect(clipId, type, params)
-whip.set_effect_param(clipId, effectId, key, value)   # value có thể là Keyframe[]
-whip.set_mask(clipId, maskId)
-
-# ── Caption ───────────────────────────────────────────────────────
-whip.auto_captions(clipId, { language?, speakerLabels? })
-whip.import_captions(trackId, assetId)         # import SRT/VTT
-whip.export_captions(captionTrackId, format)   # srt | vtt | txt
-whip.translate_captions(captionTrackId, lang)  # tạo track mới
-whip.set_caption_style(captionTrackId, stylePack)
-
-# ── Audio ─────────────────────────────────────────────────────────
-whip.set_speed(clipId, factor)
-whip.set_speed_ramp(clipId, keyframes)         # [{t,speed}]
-whip.set_pitch_lock(clipId, enabled)           # giữ pitch khi speed thay đổi
-whip.auto_duck(musicClipId, voiceTrackId, { duckDb, attackMs, releaseMs })
-whip.add_audio_fx(clipId, { type: "eq"|"compressor"|"noiseRemoval"|"limiter", ...})
-
-# ── Low-level overrides ───────────────────────────────────────────
-whip.set_keyframe / remove_keyframe / copy_keyframes
-whip.apply_preset / set_ease
-whip.add_transition
-
-# ── Xuất ─────────────────────────────────────────────────────────
 whip.render({ range?, out, preset, watermark? })
+  → WebCodecs export → mp4
+  → returns: { outputPath, duration, size }
 ```
 
 ---
 
-## Agent Skills — composite workflows
+## Agent Skills — Composite Workflows
 
-Skills = compose nhiều command primitive. Agent dùng skill thay vì rải từng lệnh.
-**Không rải keyframe** — tạo anchors + behaviors → compiler lo keyframe.
+Skills = compose nhiều semantic actions. Agent không rải lệnh đơn lẻ — dùng skill.
 
-### Skills short-form viral (thay CapCut)
+### Skills Short-Form Viral
 
-| Skill | Làm gì | Implementation |
-|---|---|---|
-| `autoCaptions` | Caption word-by-word + SmartLink | Deepgram → `bind_region` per word |
-| `autoCutOnSilence` | Cắt dead air, dồn pacing | VAD → `split_clip` + `ripple_delete` |
-| `autoPunchIn` | Punch zoom mỗi điểm nhấn (Ali Abdaal look) | emphasis cue → `add_behavior(punchOnEmphasis)` |
-| `beatSync` | Snap cut / zoom vào beat nhạc | DSP beat map → `add_behavior(beatPulse)` |
-| `autoDuck` | Hạ nhạc khi có giọng nói | VAD → `set_gain_automation` nhạc |
-| `autoReframe9x16` | Reframe sang 9:16 giữ mặt | MediaPipe face → `reframe_for_aspect` |
-| `whipItViralShort` | 1-click: caption + zoom + graphic + music duck | `whip_it` + `auto_duck` + `set_speed_ramp` |
+| Skill | Làm gì |
+|---|---|
+| `whip_it_viral(recipe?)` | Full pipeline: analyze → synthesize behaviors → apply style → compositions |
+| `auto_cut_silence()` | VAD → cut_at_word() loại dead air |
+| `auto_reframe_916()` | MediaPipe face track → reframe 16:9 → 9:16 |
+| `beat_sync(musicClipId)` | DSP beat map → anchor caption/zoom behaviors to beats |
+| `auto_duck(musicClipId)` | VAD + Web Audio → music automation keyframes |
 
-### Skills production complex (thay AE)
+### Skills Production Complex
 
-| Skill | Làm gì | Implementation |
-|---|---|---|
-| `autoZoomOnMention` | Zoom in khi đề cập đến X | transcript match → `bind_region` + `add_behavior(zoomToRegion)` |
-| `autoSequenceGraphics` | Graphic 1-2-3 map theo đoạn nói | region → `add_behavior(sequenceReveal)` |
-| `autoReframe` | Giữ speaker giữa frame khi zoom | MediaPipe → `add_behavior(followSubject)` |
-| `applyLook` | Apply Gawx / Ali Abdaal / Hormozi look | `add_effect(colorCorrect)` + `add_effect(bloom)` + ... |
-| `brollComposite` | B-roll overlay với opacity fade trên talking head | `add_clip(overlay)` + opacity keyframes + `set_blend_mode` |
-| `calloutTracker` | Callout arrow bám vật thể khi camera di chuyển | `magic_mask` → `pin_overlay_to_mask` |
-| `virtualBackground` | Thay nền (virtual bg) | `magic_mask(speaker)` → `replace_background` |
+| Skill | Làm gì |
+|---|---|
+| `analyze_and_segment()` | analyze_audio + analyze_visual → synthesize_behaviors cho toàn clip |
+| `apply_look(recipeId)` | apply color/effects preset từ Creator Style Graph |
+| `callout_tracker(clipId, x, y)` | magic_mask → pin callout overlay to mask |
+| `virtual_background(clipId)` | magic_mask(speaker) → replace_background |
+| `multi_clip_export(clips[])` | batch render N clips headless |
 
 ---
 
-## Production workflow examples
-
-### Workflow 1 — Editorial talking-head (AE-level)
-
-> *"Grade cinematic Gawx, thêm callout vào laptop lúc 48s, reframe về 9:16 cho Reels"*
+## Progressive Disclosure — Không Dump Full JSON
 
 ```
-1. get_timeline_summary()
-   → { duration: 142, clips: [{id:"c1", start:0, end:142}], ... }
+Agent Session điển hình:
 
-2. get_transcript("c1")
-   → xem nội dung, xác định sections
+1. get_project_summary()
+   → { duration: 1842s, spanCount: 12, creatorStyleId: "phong_editorial" }
 
-3. applyLook("c1", "gawx_cinematic")
-   → add_effect(c1, "colorCorrect", { saturation:0.85, liftB:-0.02 })
-   → add_effect(c1, "filmGrain",    { amount:0.15 })
-   → add_effect(c1, "bloom",        { threshold:0.75, intensity:0.3 })
+2. get_temporal_spans({ minEnergy: 0.7 })
+   → 4 high-energy spans với summary
+   → Agent hiểu structure mà không nhận 50MB OntologyGraph
 
-4. magic_mask("c1", { x: 0.62, y: 0.45, frameT: 48.2 })
-   → { maskId: "mask_laptop" }
+3. get_span_detail("span_003")
+   → words[], visualEvents[] cho span cụ thể
+   → Chỉ khi cần, chỉ span đó
 
-5. apply_composition([{
-     type: "callout_arrow", t: 48, duration: 5,
-     data: { text: "MacBook Pro M4", direction: "left" },
-     maskId: "mask_laptop"
-   }])
+4. synthesize_behaviors("span_003", { creatorStyleId: "phong_editorial" })
+   → BehaviorNode[] tailored theo creator style
 
-6. reframe_for_aspect("c1", "9:16", { subject: "face" })
+5. validate_behaviors([...])
+   → conflicts? suggestions?
 
-7. render({ out: "final_9x16.mp4", preset: "h264_1080" })
+6. compile_render({ range: [span_003.start, span_003.end] })
+   → keyframe diff
+
+7. render({ out: "clip_003.mp4" })
 ```
+
+Agent không bao giờ nhận raw `FaceEvent[]` (30fps × video duration = massive). Nhận **aggregated summaries** tại tầng TemporalSpan.
 
 ---
 
-### Workflow 2 — Short-form viral từ 1h podcast (CapCut-level)
-
-> *"Lấy 5 đoạn hay nhất từ podcast 1 giờ, 9:16, caption loud, Hormozi style"*
+## Phân Tầng: Client vs Server (Ontos)
 
 ```
-1. auto_captions("c1", { speakerLabels: true })
-   → transcript đầy đủ với SPEAKER_00 / SPEAKER_01
-
-2. auto_cut_on_silence("c1", { threshold: -40, minSilence: 0.4 })
-   → cắt 40 đoạn dead air, tiết kiệm ~8 phút
-
-3. get_transcript("c1")
-   → agent đọc transcript → chọn 5 hook moments theo criteria:
-     (có số liệu, có câu gây tranh cãi, có revelation, có before/after, có CTA)
-
-4. for each moment [0:45-1:45, 18:20-19:10, ...]:
-   a. add_clip(trimmed range)
-   b. reframe_for_aspect(clip, "9:16", { subject: "face" })
-   c. set_caption_style(track, "loud")
-   d. set_style_profile({ recipeId: "hormozi_bold" })
-   e. whip_it({ recipe: "hormozi_bold" })
-   f. auto_duck(music, voice, { duckDb: -14 })
-   g. render({ out: "viral_clip_N.mp4" })
+CLIENT — free, local, realtime              SERVER (Ontos) — async, có credit
+────────────────────────────────            ──────────────────────────────────
+analyze_visual (MediaPipe local)            auto_captions (Deepgram API)
+analyze_audio (Whisper ONNX local)          whip_it full pipeline (LLM heavy)
+beat_sync (DSP local)                       render_cloud (4K GPU farm)
+auto_duck (Web Audio local)                 translate_captions (LLM)
+remove_background (RMBG WebGPU)             magic_mask_batch (SAM2 server)
+compile_render (compute, no inference)      generate_asset (Seedream/Recraft)
+apply_creator_style (Style Graph local)     collab_sync (Elixir/Phoenix)
 ```
+
+Ranh giới này đảm bảo UI luôn 60fps. Skill nhẹ/realtime → client (free). Skill nặng/AI cost → Ontos action (credit + audit).
 
 ---
 
-### Workflow 3 — Edge cases phức tạp
+## Whip Là "Video API" Cho Toàn Cầu
 
-#### Multi-speaker interview
-
-```
-auto_captions("c1", { speakerLabels: true })
-// → SPEAKER_00 (Host) blocks và SPEAKER_01 (Guest) blocks
-set_caption_style("cap1", "clean")
-// speakerMap: SPEAKER_00 = trắng dưới, SPEAKER_01 = tím trên
-// Khi cắt clip: SmartLink chỉ relink blocks của speaker đúng với segment
-```
-
-#### Speed ramp viral + caption sync
+MCP không chỉ là giao diện cho Claude. Nó là **standard interface cho mọi AI agent muốn làm việc với video**.
 
 ```
-set_speed_ramp("c1", [{ t:5, speed:1 }, { t:5.5, speed:0.3 }, { t:7, speed:1 }])
-set_pitch_lock("c1", true)   // audio không bị pitch-down
-// Caption system tự detect speedKeys → stretch word timestamps × (1/0.3)
-// "Bí mật" bình thường 0.3s → trên timeline thành 1s, vẫn sync miệng
+Developer muốn build:
+  "AI agent tự động edit podcast → viral clip"    → dùng Whip MCP
+  "Marketing tool generate ad từ product video"  → dùng Whip MCP
+  "Education tool tạo explainer video từ script" → dùng Whip MCP
+  "News tool clip highlight từ press conference" → dùng Whip MCP
+
+Tất cả: không phải build video engine từ đầu.
+        Dùng Whip như "video OS", gọi semantic actions.
+        Whip là "Stripe cho video" — infrastructure layer.
 ```
 
-#### B-roll compositing (không che speaker hoàn toàn)
-
-```
-add_clip("ov1", "a_broll", { start: 18, end: 26 })
-set_blend_mode("c_broll", "normal")
-set_keyframe("c_broll", "opacity", { t:18, v:0 })
-set_keyframe("c_broll", "opacity", { t:18.4, v:0.85, ease:"smooth" })
-// 85% opacity → speaker vẫn thấy mờ bên dưới b-roll
-// Dùng magic_mask(speaker) → replace_background(blur) nếu muốn tách hoàn toàn
-```
-
-#### Import transcript sẵn có (không re-transcribe)
-
-```
-// User có sẵn SRT file
-import_captions("cap1", "a_srt")
-// blocks được fill từ SRT (không có word-level → 1 block = 1 subtitle line)
-// SmartLink vẫn set srcAsset + srcIn → survive clip move
-// Nếu cần word-level sau: chạy auto_captions() → merge với SRT timing
-```
+**Platform play:** Mỗi developer dùng Whip MCP → thêm data về editing patterns → Creator Style Graph aggregate pool lớn hơn → Moat 4 mạnh hơn → loop.
 
 ---
 
-## Phân tầng: client vs server (Ontos)
+## Command Registry — Auto-Gen MCP Tools
 
 ```
-CLIENT — free, local, realtime           SERVER (Ontos) — async, có credit
-─────────────────────────────────        ─────────────────────────────────
-beat_sync (DSP, < 50ms)                  auto_captions   (Deepgram API, $0.06/video)
-auto_punch_in (local LLM nhỏ)            whip_it         (full pipeline, $0.30/video)
-auto_cut_on_silence (VAD local)          translate_captions (LLM, $0.02/lang)
-auto_duck (Web Audio)                    render_cloud    (4K GPU farm, $0.10/min)
-set_blend_mode / add_effect              magic_mask_batch (SAM2 server, heavy)
-reframe_for_aspect (MediaPipe)
-remove_background (RMBG local WebGPU)
+command registry (Zod schema)
+        │
+        ├─→ TypeScript types     (GUI autocomplete)
+        ├─→ JSON Schema          ──▶  MCP tool list (auto)
+        ├─→ REST API             ──▶  HTTP endpoint (auto)
+        └─→ Ontos Action         ──▶  credit-tracked workflow (auto)
 ```
 
-Skill nhẹ / realtime → client (free). Skill nặng / tốn tiền → action_type Ontos (credit + audit).
-Ranh giới này đảm bảo UI luôn 60fps dù AI đang chạy phía sau.
+Thêm 1 command → tự có MCP tool + REST endpoint + UI action. Không maintain 3 nơi. Cùng triết lý "1 schema → MCP + REST + UI" của Ontos platform.

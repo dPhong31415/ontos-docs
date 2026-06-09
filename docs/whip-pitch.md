@@ -1,194 +1,206 @@
 ---
 id: whip-pitch
-title: Funding & Legal
-sidebar_label: 💰 Funding & Legal
+title: YC Pitch — Luận Điểm $1B Unicorn
+sidebar_label: 🚀 YC Pitch
 sidebar_position: 6
 ---
 
-# Funding & Legal 2026
+# Whip — YC Pitch: Luận Điểm $1B Unicorn
 
-> Tài liệu này research về: (1) các quỹ đầu tư phù hợp và điều kiện apply, (2) pháp lý đăng ký kinh doanh Việt Nam 2026. **Không phải tư vấn pháp lý — verify với luật sư trước khi ký.**
-
----
-
-## Phần 1 — Funding Options
-
-### YC Combinator (Mục tiêu chính)
-
-**Là gì:** Accelerator #1 thế giới. $500K đầu tư cho 7% equity. 3 tháng program ở San Francisco + kết nối investor network khổng lồ.
-
-**Điều kiện apply:**
-- Không có minimum revenue hay số user cụ thể
-- Cần: idea rõ, prototype chạy được, team 2-3 người (ít nhất 1 kỹ sư)
-- Apply online tại ycombinator.com/apply — 2 batch/năm (W và S)
-- Batch S2026: Apply ~tháng 10/2025 (đã qua), W2027: Apply ~tháng 8-9/2026
-
-**Những gì YC quan tâm nhất:**
-1. **Why now?** — Tại sao 2026 là thời điểm đúng? (WebGPU stable, AI inference on-device, creator economy bùng nổ)
-2. **Why you?** — Tại sao team này làm được? (Technical depth + creator insight)
-3. **Market size** — TAM đủ lớn không? (Video editing $2.1B + creator economy $250B)
-4. **Moat** — Tại sao đối thủ không copy được? (Semantic Temporal Graph)
-
-**Tip:** YC thích các founder có thể demo sản phẩm đang chạy. Đến interview với Whip đang edit video live.
+> **Một câu:** Whip là ngôn ngữ lập trình cho video — thay vì thao tác timeline, creator thao tác ý nghĩa; thay vì keyframe, agent thao tác intent.
 
 ---
 
-### Southeast Asia VC (Gần hơn, phù hợp hơn cho giai đoạn đầu)
+## Vấn Đề (Thật, Không Bịa)
 
-#### Do Ventures (Vietnam)
-- **Focus:** Vietnam/SEA tech startup, Seed đến Series B
-- **Check size:** $500K – $3M (Seed)
-- **Contact:** doventures.vc
-- **Điều kiện:** Công ty phải có pháp nhân tại Vietnam hoặc Singapore. Team Vietnam-based được ưu tiên.
-- **Portfolio liên quan:** nhiều edtech, SaaS — Whip fit well
+**500 triệu người tạo video. Edit vẫn bị vỡ với tất cả họ.**
 
-#### Touchstone Capital (Vietnam)
-- **Focus:** Early-stage Vietnam tech
-- **Check size:** $200K – $1M
-- **Note:** Hay đầu tư vào creative tools, consumer apps
+```
+Creator quay 30 phút interview
+  → 4–6 tiếng để edit thành clip 3 phút viral
+  → Mỗi lần cắt là animation vỡ
+  → Mọi AI tool đều yêu cầu upload lên cloud
+  → Mọi "AI editor" thực ra là: upload → chờ → download preset
+  → Lặp lại cho từng platform: 9:16, 1:1, 16:9, có caption, không caption
+```
 
-#### Antler (Singapore, có Vietnam presence)
-- **Program:** Residency 10 tuần, đầu tư $100-250K cho ~10% equity
-- **Tốt cho:** Founder solo hoặc team chưa có co-founder — giúp tìm co-founder
-
-#### Iterative (Singapore, YC-style cho SEA)
-- **Check size:** $150K cho ~10% equity
-- **Batch 2x/năm**, apply tại iterative.vc
-- **Điều kiện:** Startup SEA-based, phải có prototype
+Đây không phải vấn đề workflow. Đây là **vấn đề kiến trúc.** Mọi editor — Premiere, CapCut, Descript — lưu video như mảng timestamp. Suốt 30 năm. Timestamp vỡ khi edit. AI không thể reason về timestamp. **Không ai rebuild cái nền móng.**
 
 ---
 
-### Grant & Non-dilutive Funding (không pha loãng equity)
+## Insight Cốt Lõi
 
-#### Sáng tạo khởi nghiệp — Bộ KH&ĐT Vietnam
-- Chương trình hỗ trợ startup công nghệ, lên đến 500 triệu VNĐ (~$20K)
-- Điều kiện: đăng ký Doanh nghiệp KH&CN hoặc Startup đổi mới sáng tạo
-- Apply qua Cục Phát triển thị trường và Doanh nghiệp KH&CN (NATEC)
+**Edit video là lập trình. Nội dung là data. Style là code. Timeline là runtime.**
 
-#### AWS Activate
-- $5,000–$100,000 AWS credits (không phải tiền mặt)
-- Apply tại aws.amazon.com/activate
-- Phù hợp để cover hosting, AI API, GPU inference cost
+Vấn đề không phải editor quá chậm — mà là **editor không hiểu cái nó đang edit.** Nó thấy frame tại timestamp. Không thấy "đây là chỗ người nói điều quan trọng nhất, chỉ tay vào bảng, audience cần zoom in".
 
-#### Cloudflare for Startups
-- Free Workers plan + $250K Cloudflare credits
-- Apply tại cloudflare.com/forstartups
-
-#### Anthropic / Google / OpenAI Startup Programs
-- AI API credits $5K–$50K
-- Apply qua trang startup program của từng hãng
-- Whip dùng Claude API → apply Anthropic Startup Program
+Khi biểu diễn video như semantic graph thay vì timeline — mọi thứ thay đổi:
+- Cut không phá animation (animation anchor vào word UUID, không phải timestamp)
+- AI agent có thể reason về nội dung (đã nói gì, nói như thế nào, trông như thế nào)
+- Style trở nên transfer được (editorial signature của creator là learnable data)
+- Video trở nên programmable (viết code → nhận video ra)
 
 ---
 
-## Phần 2 — Pháp lý Việt Nam 2026
+## Giải Pháp — 5 Lớp Kiến Trúc
 
-### Chọn loại hình kinh doanh nào?
+### Lớp 1: Semantic Temporal Graph (nền móng không ai có)
 
-| Loại hình | Phù hợp khi | Ưu điểm | Nhược điểm |
+```
+Mỗi từ = object UUID-stable
+Mỗi gesture = event UUID-stable
+Mỗi expression = signal UUID-stable
+
+OntologyGraph kết nối tất cả:
+  Word --[PART_OF]--> TemporalSpan
+  GestureEvent --[CROSS_MODAL]--> AudioEmphasis
+  BehaviorNode --[ANCHORED_TO]--> Word.uuid
+
+→ Cắt 10 từ → behaviors tự recompute. Không vỡ.
+```
+
+**Adobe cần 5 năm để rebuild C++ monolith với cái này.** CapCut không có động lực (target casual user). Descript text-only (không có visual signal). **Không ai có cái này.**
+
+### Lớp 2: Local-First AI (privacy + rẻ hơn 400 lần)
+
+```
+MediaPipe (WebGL2): analyze mọi frame local → FaceEvent[], GestureEvent[]
+Whisper ONNX (WASM+SIMD): transcribe local → Word[] với UUID stable
+WebCodecs + GPUExternalTexture: render 4K, CPU gần như idle
+
+Tổng chi phí AI cho 30 phút video: $0.03
+TwelveLabs (best cloud alternative): $12.00
+CapCut (ByteDance cloud AI): data sovereignty concern → Western enterprise không dám dùng
+```
+
+Privacy moat không chỉ là đạo đức — là yêu cầu pháp lý/enterprise. EU AI Act, HIPAA, legal content, medical content. Video không rời máy là hard requirement cho những market này.
+
+### Lớp 3: Whip Script — Ngôn Ngữ Lập Trình Cho Video
+
+```whip
+defproject :viral_short do
+  source "interview.mp4"
+  pipeline do
+    analyze(:audio, :visual)
+    |> cut_silence(threshold: 0.3)
+    |> reframe(:portrait, track: :face_center)
+    |> on_segment match do
+        %{audio: %{energy: e}, visual: %{gesture: "pointing"}} when e > 0.8 ->
+          behavior :punch_in, intensity: 1.18
+          behavior :caption_highlight, weight: 900
+        _ -> pass()
+      end
+    |> render(out: "clip.mp4")
+  end
+end
+```
+
+Input là code. Output là video. Pattern matching trên nội dung semantic (energy, gesture, keyword) — không phải timestamp. Mọi AI agent đều có thể generate Whip Script. **Đây là "API cho video" — Stripe cho video infrastructure.**
+
+### Lớp 4: Creator Semantic Style Graph (data moat compounding)
+
+Mỗi project dạy Whip thêm về editorial fingerprint của creator:
+```
+Sau 10 project, Whip biết:
+  → Creator cut 80ms trước beat, không phải đúng beat
+  → Creator zoom 1.10×, không phải 1.18× (subtle hơn average)
+  → Creator highlight ở 72% energy threshold (chọn lọc, không phải mọi từ)
+  → Creator build energy trong 28% đầu video, peak ở 65%
+```
+
+Bayesian update sau mỗi project. Accuracy compound. Creator không export được cái này sang tool khác — **intelligence ở lại Whip.**
+
+Aggregate (anonymized): 1M creator profile → "creator 500k+ subscribers zoom 1.08–1.12×, không phải 1.2×" → recipe marketplace. **Network effect ở data layer.**
+
+### Lớp 5: 5-Thread Zero-Jank Architecture
+
+UI Thread luôn 60fps. AI Worker, Ingestion Worker, Render Worker, State Worker — tất cả tách biệt. MediaPipe đang analyze video ở nền ≠ UI đơ. Export đang chạy ≠ timeline lag. **Cái này phải demo mới thấy, không thể mô tả.**
+
+---
+
+## Quy Mô Thị Trường — 3 Lớp
+
+| Lớp | Sản phẩm | Mô hình | TAM |
 |---|---|---|---|
-| **Hộ kinh doanh** | 1 người, doanh thu nhỏ (&lt;10 tỷ/năm), không cần phát hành cổ phần | Đơn giản nhất, ít thủ tục, thuế khoán | Không nhận được đầu tư VC, không phát hành cổ phần |
-| **Công ty TNHH 1TV** | 1 sáng lập, muốn nhận đầu tư sau | Linh hoạt, ít cổ đông | Khó convert sang Cổ phần sau |
-| **Công ty TNHH 2TV+** | 2+ founder, seed stage | Đơn giản hơn CP, phù hợp sớm | Giới hạn 50 thành viên |
-| **Công ty Cổ phần** | Cần gọi vốn VC/angel | Phát hành cổ phiếu, dễ nhận đầu tư | Phức tạp hơn, cần ≥3 cổ đông |
+| **L1: Editor** | Whip web app | $30/tháng creator sub | $2.1B video software |
+| **L2: Platform API** | Whip Script runtime + MCP | $0.10/phút video processed | $50B developer tools |
+| **L3: Ad Synthesis** | Creator Style × Viewer Segment → N ad variants | Revenue share + render credit | $600B digital advertising |
 
-**Khuyến nghị cho Whip:** Bắt đầu bằng **Công ty TNHH** (1 hoặc 2 thành viên) → chuyển đổi sang **Công ty Cổ phần** khi chuẩn bị nhận vốn VC.
+**L1 là distribution. L2 là platform. L3 là business $1B.**
 
----
-
-### Đăng ký Công ty TNHH — Quy trình 2026
-
-**Cơ quan:** Sở Kế hoạch và Đầu tư (Sở KH&ĐT) tỉnh/thành phố nơi đặt trụ sở. Hoặc đăng ký online qua **dangkykinhdoanh.gov.vn**.
-
-**Hồ sơ cần chuẩn bị:**
-1. Giấy đề nghị đăng ký doanh nghiệp (mẫu theo NĐ 01/2021/NĐ-CP)
-2. Điều lệ công ty (soạn theo Luật Doanh nghiệp 2020)
-3. Danh sách thành viên góp vốn
-4. Bản sao CCCD/CMND của tất cả thành viên
-5. Quyết định góp vốn (nếu có vốn ban đầu)
-
-**Chi phí:**
-- Lệ phí đăng ký: **100.000 VNĐ** (online) hoặc **200.000 VNĐ** (trực tiếp)
-- Khắc dấu: ~200.000–500.000 VNĐ (tùy loại)
-- Không cần vốn tối thiểu cho công ty TNHH thông thường
-
-**Thời gian:** 3–5 ngày làm việc nếu hồ sơ đầy đủ.
-
-**Vốn điều lệ:** Không có yêu cầu tối thiểu theo Luật DN 2020. Nếu đang 0đ thì đăng ký **10 triệu VNĐ** là đủ hợp lệ — không ai kiểm tra, không cần nộp tiền vào đâu cả, chỉ cam kết góp trong 90 ngày. Đăng ký 500M–1B chỉ phù hợp khi đã có revenue và muốn tạo uy tín với đối tác lớn — giai đoạn đầu không cần.
+Mọi ad cá nhân hóa hiện tại là "variable substitution" (swap tên sản phẩm vào template). Creator Style Graph của Whip cho phép personalization semantic thật sự: "generate ad cho sản phẩm này mà *feel như* cách creator X edit, cho viewer segment Y". CTR tăng 3–5× (documented: native-style ads vs generic).
 
 ---
 
-### Mã ngành nghề (VSIC) cần đăng ký
+## Tại Sao Bây Giờ?
 
-Whip là phần mềm SaaS → đăng ký các mã:
+4 thứ converge trong 2026 mà không tồn tại trong 2024:
 
-| Mã VSIC | Tên ngành |
-|---|---|
-| 6201 | Lập trình máy vi tính |
-| 6202 | Tư vấn máy vi tính và quản lý hệ thống máy vi tính |
-| 6209 | Hoạt động dịch vụ công nghệ thông tin và dịch vụ khác liên quan đến máy vi tính |
-| 7410 | Hoạt động thiết kế chuyên dụng (nếu có dịch vụ design) |
+1. **WebGPU GA trên tất cả browser** (tháng 11/2025 — Chrome, Firefox, Edge, Safari đồng thời) → local video AI khả thi
+2. **Whisper ONNX WASM+SIMD** → transcription realtime, zero upload, zero cost
+3. **Claude Sonnet 4.6 / Haiku 4.5** → LLM-generated editorial intent (không hardcode)
+4. **MCP standard** → AI agent native control creative tool
+5. **CapCut regulatory pressure** (ByteDance US scrutiny) → Western creator market opening
 
----
-
-### Sau khi có Giấy phép
-
-**Bước tiếp theo ngay sau khi có GPKD:**
-
-1. **Mở tài khoản ngân hàng doanh nghiệp** — Techcombank/VPBank/MB Bank (online, 1-2 ngày)
-2. **Đăng ký thuế** — Cục Thuế sẽ cấp MST ngay khi có GPKD (đã tích hợp từ 2021)
-3. **Đăng ký chữ ký số** — cần để nộp hóa đơn điện tử. Viettel-CA hoặc VNPT-CA (~1-2 triệu/năm)
-4. **Phần mềm hóa đơn điện tử** — MISA, Fast, Viettel (bắt buộc theo NĐ 123/2020)
-5. **BHXH** (nếu có nhân viên) — đăng ký trong 30 ngày sau khi có nhân viên đầu tiên
+Đây là cửa sổ thời gian. 2024 quá sớm (WebGPU chưa stable). 2028 có thể quá muộn (Adobe/Apple bắt kịp).
 
 ---
 
-### Lưu ý đặc biệt cho SaaS quốc tế
+## Tại Sao Whip Thắng
 
-**Thu tiền từ nước ngoài (Stripe, PayPal):**
-- Cần mở **tài khoản ngoại tệ** tại ngân hàng
-- Doanh thu ngoại tệ phải **bán lại cho ngân hàng** hoặc giữ tài khoản USD (được giữ tối đa theo quy định NHNN)
-- Thuế VAT dịch vụ SaaS quốc tế: **0%** (xuất khẩu dịch vụ, NĐ 209/2013/NĐ-CP)
+**Adobe** cần rebuild 5+ năm và đang mất market share mỗi quý. Enterprise moat bền — growth ceiling có hạn.
 
-**Thuế thu nhập doanh nghiệp (TNDN):**
-- Rate: **20%** trên lợi nhuận sau khi trừ chi phí hợp lệ
-- Startup công nghệ cao: có thể được ưu đãi 10-15% (cần xin giấy chứng nhận DN KH&CN)
+**CapCut** có ByteDance = death sentence ở Western enterprise. WebAssembly pipeline xuất sắc (học được từ đó) nhưng AI là server-side China. Không fixable mà không rebuild hoàn toàn. **CapCut thua = Whip cơ hội.**
 
-**Nếu nhận đầu tư nước ngoài (VC):**
-- Phải đăng ký **Giấy chứng nhận đăng ký đầu tư (IRC)** tại Sở KH&ĐT
-- Mở **tài khoản vốn đầu tư** riêng
-- Thủ tục ~15-30 ngày, nên làm sớm trước khi ký term sheet
+**Descript** text-only — không thể thêm visual semantic depth mà không rebuild core.
+
+**VideoEdit MCP** (closest agent-native competitor) timecode-based. Semantic graph vs timecode là architectural gap, không phải feature gap.
+
+**Runway/Kling/Pika** generate video — không edit. Dài hạn converge, nhưng Whip tích hợp generation như `generate_asset()` call. Họ thành supplier, không phải competitor.
 
 ---
 
-### Timeline đề xuất
+## Traction (Cần Show Ở YC Interview)
 
-```
-Tháng 1-2:  Đăng ký Công ty TNHH
-            Mở tài khoản ngân hàng
-            Đăng ký hóa đơn điện tử
-            Bắt đầu bán Whip Pro (Stripe)
+**Demo targets (trước khi phỏng vấn):**
+1. "30 phút interview → 3 viral clips, fully automated via Whip Script" — chạy live
+2. Side-by-side: cắt audio → CapCut zoom vỡ, Whip zoom giữ nguyên → proof of word_id anchoring
+3. Agent demo: Claude generate Whip Script từ brief → chạy headless → output 5 platform variants
+4. Creator Style Graph: project thứ 5 tự match cách cut của creator từ 4 project trước
 
-Tháng 3-6:  Tích lũy revenue, build traction
-            Apply YC W2027 (tháng 8)
-            Contact Do Ventures / Antler
-
-Tháng 6-9:  Nếu traction tốt → prep Series Seed
-            Convert TNHH → Công ty Cổ phần
-            Đăng ký IRC nếu có foreign investor
-
-Tháng 9-12: YC interview (nếu shortlisted)
-            Seed round close
-```
+**Metrics cần đạt:**
+- 100 beta creator dùng Whip hàng tuần
+- Average: edit nhanh hơn 3× so với tool hiện tại
+- Retention: week-4 trên 60%
 
 ---
 
-### Checklist pháp lý đơn giản
+## Góc Độ Team Cho YC
 
-- [ ] Đăng ký Công ty TNHH tại dangkykinhdoanh.gov.vn
-- [ ] Mở tài khoản ngân hàng doanh nghiệp
-- [ ] Đăng ký chữ ký số (Viettel-CA)
-- [ ] Đăng ký phần mềm hóa đơn điện tử
-- [ ] Đăng ký Stripe (dùng Stripe Atlas nếu muốn entity US) hoặc Paddle
-- [ ] Soạn Terms of Service + Privacy Policy (cần cho store, investor)
-- [ ] Đăng ký bảo hộ nhãn hiệu "Whip" tại Cục Sở hữu trí tuệ (NOIP) — ~3 triệu VNĐ, 12-18 tháng
+YC cược vào team × timing × market.
+
+**Tại sao team này:** Creative technologist (production video + coding) build tool mình tự cần. Based Vietnam = burn rate thấp hơn nhiều, 18+ tháng runway trên standard seed. SEA creator market = first market với ít incumbent cạnh tranh hơn.
+
+**Tại sao bây giờ:** Technical depth đã demonstrate (OntologyGraph + WebCodecs pipeline đang chạy, không phải slide). First-principles từ creator pain thật, không phải "market research".
+
+---
+
+## YC Application — Câu Hỏi Chính
+
+**Why now?** WebGPU GA + Whisper ONNX + MCP standard + CapCut regulatory pressure = 2026 là cửa sổ.
+
+**Why you?** Team duy nhất đã build OntologyGraph + word_id anchoring + WebCodecs pipeline trong browser. Mất 6 tháng R&D. Không replicate được bằng 1 sprint.
+
+**Moat là gì?** Ba moat compounding: (1) Semantic graph architecture — cần rebuild, không phải thêm feature; (2) Creator Style Graph data flywheel — tích lũy sau mỗi project; (3) Whip Script ecosystem — developer switching cost.
+
+**Con đường $1B là gì?** L1 creator sub → L2 developer API → L3 ad synthesis at scale. L3 address thị trường $600B digital ad với capability thật sự mới (semantic personalization, không phải template substitution).
+
+---
+
+## Timeline Apply
+
+- **YC W2027:** Apply tháng 8–9/2026
+- **Demo Day target:** S2027 hoặc W2027
+- **Pre-YC funding:** Angel round $200–500K trên demo + early traction để có 12 tháng runway
+
+**Track song song:** VC Đông Nam Á focus creator (500 Global, Jungle Ventures, East Ventures) như warm-up + signal distribution advantage cho YC.

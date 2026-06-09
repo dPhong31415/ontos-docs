@@ -5,242 +5,213 @@ sidebar_label: 🎚 Smart Animation
 sidebar_position: 5
 ---
 
-# Smart Animation — Behaviors & Anchors
+# Smart Animation — Behavior System
 
-> **Đây là thứ làm Whip KHÁC After Effects.** Không keyframe tay. Animation **bind vào ý nghĩa**
-> (lời nói, cấu trúc nội dung), không bind vào thời gian tuyệt đối. Sửa lời → animation tự dời theo.
-> Triết lý kiểu **Unreal**: procedural + override, không phải đặt keyframe thủ công từng cái.
-
----
-
-## Vấn đề với keyframe tay (AE/CapCut)
-
-```
-AE:  bạn đặt keyframe zoom ở giây 12.4
-     ↓ trim clip / cut lại câu nói
-     lời "cái graph" dời sang giây 14.0
-     ↓
-     keyframe vẫn ở 12.4 → LỆCH → sửa tay lại từ đầu  😩
-```
-
-Keyframe **độc lập** với nội dung. Đó chính là cái bạn không muốn. Mỗi lần đụng audio là
-animation vỡ. Với talking-head (cut liên tục) → ác mộng.
+> **Đây là thứ làm Whip KHÁC After Effects.** Không keyframe tay. Animation **bind vào ý nghĩa** — lời nói, cử chỉ, cấu trúc nội dung. Sửa lời → animation tự dời theo.
+> Và quan trọng hơn: **behavior không phải hardcode** — LLM generate chúng từ semantic understanding.
 
 ---
 
-## Ý tưởng: bind motion to meaning
+## Vấn đề với Keyframe Tay (AE/CapCut)
 
 ```
-       Zoom in KHÔNG phải vì "giây 12.4"
-       mà vì "người ta ĐANG NÓI VỀ cái graph"
-       → lời dời thì zoom tự dời theo
+AE:  đặt zoom keyframe ở giây 12.4
+     ↓ trim clip / cắt lại câu
+     "graph" dời sang 14.0
+     keyframe vẫn ở 12.4 → LỆCH → sửa tay lại  😩
 ```
 
-Ba lớp, keyframe nằm ở **đáy** và **được sinh ra**, không sửa tay:
-
-```
-┌─ ANCHORS ─────────────┐   ┌─ BEHAVIORS ──────────┐   ┌─ KEYFRAMES ──────────┐
-│ mốc theo NỘI DUNG     │──▶│ animation THAM SỐ    │──▶│ compiled, derived     │
-│ (transcript, beat,    │   │ bind vào anchor      │   │ tự sinh lại khi       │
-│  region, emphasis)    │   │                      │   │ content đổi           │
-└───────────────────────┘   └──────────────────────┘   └──────────────────────┘
-        source of truth            reusable logic          compiled artifact
-```
+Keyframe **độc lập** với nội dung. Mỗi lần đụng audio là animation vỡ. Với talking-head (cắt liên tục) = ác mộng.
 
 ---
 
-## Lớp 1 — Anchors (mốc theo nội dung)
+## Ba Lớp: Anchors → Intents → Keyframes
 
-Anchor = tham chiếu thời gian **dẫn xuất từ nội dung**, không phải số giây cứng.
+```
+┌─ ANCHORS ──────────────┐   ┌─ EDITORIAL INTENTS ────┐   ┌─ KEYFRAMES ──────────┐
+│ mốc theo NỘI DUNG      │──▶│ LLM generate           │──▶│ compiled, derived    │
+│                         │   │ open vocabulary        │   │ tự sinh lại khi      │
+│ word_id (stable UUID)  │   │ không hardcode type     │   │ anchor đổi           │
+│ visual_event_id        │   │                        │   │                      │
+│ beat, speaker, subject │   │                        │   │                      │
+└────────────────────────┘   └────────────────────────┘   └──────────────────────┘
+        source of truth         LLM-generated logic           compiled artifact
+```
 
-| Anchor | Là gì | Nguồn |
+**Keyframe nằm ở đáy và được sinh ra** — không sửa tay. User làm việc ở tầng Intent, không tầng keyframe.
+
+---
+
+## Lớp 1 — Anchors (Mốc Theo Nội Dung)
+
+Anchor = tham chiếu **dẫn xuất từ nội dung**, không phải số giây cứng.
+
+| Anchor Type | Là gì | Nguồn |
 |---|---|---|
-| `region` | một khoảng có nghĩa: "đoạn nói về graph" [12.4–18.9] | transcript match / chọn tay |
-| `cue` | một điểm: emphasis, đầu câu, từ khóa được nói | speech analysis / Whisper |
-| `beat` | nhịp nhạc | beat detect |
-| `marker` | mốc thủ công | bạn đặt |
-| `subject` | event bám chủ thể: mặt vào/ra khung | MediaPipe |
+| `word_id` | ID stable của 1 từ trong transcript | Whisper ONNX ingestion |
+| `word_range` | [startWordId, endWordId] — khoảng ngữ nghĩa | Whisper + LLM segment |
+| `visual_event_id` | 1 khoảnh khắc: gesture/expression/motion | MediaPipe ingestion |
+| `temporal_span_id` | TemporalSpan — closure audio+visual | OntologyGraph aggregate |
+| `beat` | nhịp nhạc tại index N | DSP beat detection |
+| `speaker_segment` | đoạn 1 speaker nói | pyannote diarization |
+
+**Quan trọng:** Anchor vào `word_id` (UUID stable), không vào timestamp. Cắt bỏ đoạn từ w_005 đến w_010 → behavior anchor vào w_011 vẫn sống, tự recompute position.
 
 ```jsonc
-"anchors": {
-  "regions": [
-    { "id":"r_chart", "label":"nói về graph",
-      "start":12.4, "end":18.9, "source":"transcript:revenue chart" }
-  ],
-  "cues": [
-    { "id":"cue_emph_3", "t":24.1, "kind":"emphasis", "source":"speech" }
-  ]
+// BehaviorNode anchor — word_id thay vì timestamp
+{
+  "id": "beh_001",
+  "anchor": {
+    "type": "word_range",
+    "startWordId": "w-3f8a2b",    // UUID stable, không phải index
+    "endWordId":   "w-9c1d4e"
+  }
 }
 ```
 
-**Quan trọng:** `start/end` của region **derive từ transcript**. Trim clip → transcript dời →
-region tự cập nhật → mọi behavior bám nó dời theo. **Không đụng một keyframe nào.**
+---
+
+## Lớp 2 — Editorial Intents (LLM-Generated, Open Vocabulary)
+
+Đây là điểm khác biệt lớn nhất với mọi editor khác.
+
+**Không phải:**
+```jsonc
+{ "type": "zoomToRegion", "params": { "amount": 1.15 } }
+// ← hardcoded type, AI phải "biết" type này tồn tại
+// ← AI bị giới hạn bởi vocabulary cố định của developer
+```
+
+**Mà là:**
+```jsonc
+{
+  "id": "beh_001",
+  "semanticIntent": "high_energy_hook",         // LLM đặt tên, open
+  "anchor": { "type": "word_range", "startWordId": "w-3f8a", "endWordId": "w-9c1d" },
+  "signals": {
+    "audioEnergy": 0.92,
+    "gesture": "pointing",
+    "expression": "emphatic",
+    "wordsPerSec": 4.2,
+    "keywords": ["quan trọng nhất", "phải biết"]
+  },
+  "editorialIntent": {
+    "cameraFeel":       "aggressive",     // compiled → punch-in zoom 1.18x expo-out
+    "captionEnergy":    "explosive",      // compiled → word pacing + size×1.3 + weight 900
+    "visualTension":    "peak",           // compiled → filmGrain↑ + rgbSplit flash
+    "audioPresence":    "dry"             // compiled → music duck -20dB attack 80ms
+  },
+  "provenance": {
+    "source": "claude_haiku",
+    "confidence": 0.87,
+    "createdAt": 1749456000000
+  }
+}
+```
+
+**LLM generate cả `semanticIntent` lẫn `editorialIntent`** từ cross-modal signals. Vocabulary mở — LLM có thể tạo intent mới chưa từng có (`"gradual_revelation"`, `"comedic_pause"`, `"data_anchor"`).
 
 ---
 
-## Lớp 2 — Behaviors (animation tham số, bind vào anchor)
+## Intent Compiler — Map Intent → Primitives
 
-Behavior = logic animation tái sử dụng, gắn vào anchor. **Không chứa số giây** — chỉ chứa "làm gì".
+```
+editorialIntent                    →    technical primitives
+─────────────────────────────────────────────────────────────
+cameraFeel: "aggressive"           →    scale: 1.0→1.18, expo-out 0.12s, hold, →1.0 smooth 0.3s
+cameraFeel: "curious"              →    slow pan +0.03, gentle zoom 1.06, ease settle
+cameraFeel: "static"               →    no scale change, minor drift only
+
+captionEnergy: "explosive"         →    pacing=word, size×1.3, weight=900, rgb-split 0.15s
+captionEnergy: "calm_informative"  →    pacing=chunk, size×0.9, weight=400, fade in
+captionEnergy: "building"          →    size ramp từ 1.0→1.15 over span
+
+visualTension: "peak"              →    filmGrain.amount↑0.4, rgbSplit.offset 3px flash
+visualTension: "release"           →    filmGrain.amount↓0.1, brightness +0.05
+
+audioPresence: "dry"               →    music gainDb -20, attack 80ms, release 1.2s
+audioPresence: "full"              →    music gainDb 0, no automation
+```
+
+Compiler là **data, không phải code** — mapping table, có thể extend mà không rebuild engine. LLM generate intent mới → add row vào mapping table → tự hoạt động.
+
+---
+
+## Lớp 3 — Compile (Intents + Anchors → Keyframes)
+
+```
+compileRender(project):
+  for mỗi BehaviorNode b:
+     anchor   = resolve(b.anchor, ontologyGraph)    // word_id → {start, end} hiện tại
+     intents  = b.editorialIntent
+     keyframes = intentCompiler.compile(intents, anchor, creatorStyleGraph)
+     write(keyframes → clip.properties, source="behavior:beh_001")
+```
+
+- Chạy mỗi khi anchor đổi (trim, re-transcribe, user cut)
+- Keyframe sinh ra đánh dấu `source: "behavior:id"` — phân biệt với keyframe tay
+- `creatorStyleGraph` calibrate output: cùng intent "aggressive" nhưng creator A thích 1.10x, creator B thích 1.18x
+
+---
+
+## Cross-Modal Behaviors
+
+Behavior mạnh nhất khi anchored vào INTERSECTION của audio + visual:
 
 ```jsonc
-"behaviors": [
-  {
-    "id":"b1", "type":"zoomToRegion",
-    "target":"c1",            // clip nào
-    "bind":"r_chart",         // bám region "nói về graph"
-    "params":{ "amount":1.15, "ease":"smooth",
-               "holdDuring":true, "releaseAfter":true }
-    // → compile: scale 1.0 @start ─ease-in→ 1.15 ─hold─ →1.0 @end ─smooth release
+{
+  "id": "beh_cm_001",
+  "links": [
+    { "type": "CROSS_MODAL", "targetId": "beh_audio_042" },   // audio: emphasis
+    { "type": "CROSS_MODAL", "targetId": "beh_visual_071" }   // visual: pointing gesture
+  ],
+  // Chỉ trigger khi CẢ HAI signal active đồng thời
+  "triggerLogic": "AND",
+  "editorialIntent": {
+    "cameraFeel": "decisive",       // mạnh hơn chỉ audio hoặc chỉ visual đơn lẻ
+    "captionEnergy": "highlight"
   }
-]
+}
 ```
 
-Thư viện behavior (talking-head):
-
-| Behavior | Làm gì | Ví dụ của bạn |
-|---|---|---|
-| `zoomToRegion` | zoom in mượt suốt region, zoom out khi hết | **"nhắc tới graph → zoom in, nói xong → zoom out"** ✅ |
-| `punchOnEmphasis` | punch-in tại mỗi cue emphasis | nhấn mạnh → giật nhẹ vào |
-| `sequenceReveal` | rải N graphic theo region (xem dưới) | **graphic layer 1-2-3 map theo thời lượng** ✅ |
-| `followSubject` | bám mặt speaker khi zoom | giữ mặt giữa khung |
-| `settleDrift` | trôi parallax nhẹ cả clip | nền sống động |
-| `beatPulse` | scale pulse theo beat | sync nhạc |
+"Zoom tại đây vì: người đang nói từ 'quan trọng' (Word) ĐỒNG THỜI chỉ tay về phía bảng (GestureEvent)" — semantic depth mà không editor nào làm được.
 
 ---
 
-## Lớp 3 — Compiler (behaviors + anchors → keyframes)
-
-```
-compile(project):
-  for mỗi behavior b:
-     anchor = resolve(b.bind)              // region/cue → {start,end} thực tại
-     kf = generator[b.type](anchor, b.params)   // sinh keyframe + bezier
-     ghi kf vào clip.properties (đánh dấu source: "behavior:b1")
-```
-
-- Chạy **mỗi khi** anchor đổi (trim, re-transcribe, kéo region).
-- Keyframe sinh ra **đánh dấu `generated`** — khác keyframe tay (`manual`).
-- Preview/export đọc keyframe đã compile như thường → engine render không cần biết behavior là gì.
-
----
-
-## Override / Bake (khi cần tay như Unreal)
+## Override / Bake
 
 Procedural lo 95%. 5% cần chỉnh tay:
 
 ```
-behavior generated keyframes        bạn muốn cong curve khác ở 1 chỗ
-        │                                      │
-        ├── Override 1 keyframe ───────────────┘   (giữ behavior, ghi đè 1 điểm)
+behavior generated keyframes     →    user muốn cong curve khác ở 1 chỗ
         │
-        └── Bake → manual ─────────────────────────►  đông cứng thành keyframe tay,
-                                                       ngắt khỏi behavior (full control)
+        ├─ Override 1 keyframe   →    giữ behavior, ghi đè 1 điểm
+        │                              behavior vẫn recompute các điểm còn lại
+        └─ Bake → manual         →    đông cứng thành keyframe tay
+                                       ngắt khỏi behavior, full control
 ```
 
-Giống Unreal: chạy procedural, "bake to keyframes" khi cần tinh chỉnh thủ công. Mặc định bạn
-**không bao giờ** phải mở curve editor — chỉ khi muốn.
+Giống Unreal "Bake to Keyframes": chạy procedural, bake khi cần tinh chỉnh thủ công. Mặc định không bao giờ mở curve editor.
 
 ---
 
-## Hai ví dụ của bạn, đầy đủ luồng
+## Agent Làm Việc Ở Tầng Intent
 
-### A. "Nhắc tới graph → zoom in smooth, nói xong → zoom out"
-
-```
-1. autoCaptions → transcript có timestamp từng chữ
-2. tạo region:  bindRegion("revenue chart" hoặc chọn tay)  → r_chart [12.4–18.9]
-3. gắn behavior: zoomToRegion(c1, r_chart, amount=1.15, releaseAfter=true)
-4. compile → scale: 1.0 @12.4 ─ease→ 1.15, hold, ─ease→ 1.0 @18.9 (+0.4s release)
-5. sửa lại câu, "graph" dời sang 14.0 → region tự thành [14.0–20.5]
-   → recompile → zoom tự dời. KHÔNG sửa keyframe.  ✅
-```
-
-### B. "Graphic layer 1-2-3 map theo thời lượng talking head"
+Agent không rải keyframe (dễ sai, khó review). Agent làm việc ở tầng **ngữ nghĩa**:
 
 ```
-1. region r_explain = đoạn người ta giải thích 3 ý  [30.0–48.0]  (18s)
-2. có sẵn 3 graphic: g1, g2, g3
-3. behavior: sequenceReveal([g1,g2,g3], bind=r_explain,
-                mode="distribute", in="fadeUp", out="fadeOut", stagger="auto")
-4. compile → chia đều 18s:
-      g1 hiện 30.0–36.0, g2 36.0–42.0, g3 42.0–48.0  (fade in/out tự tính)
-5. region co/giãn (nói nhanh hơn → 12s) → 3 graphic TỰ co theo, vẫn chia đều.  ✅
-   graphic KHÔNG independent — nó slaved vào region.
+Analyzer Agent:
+  → đọc OntologyGraph (Word[], FaceEvent[], GestureEvent[])
+  → hiểu: "span này là high-energy hook với pointing gesture và emphatic speech"
+
+Editor Agent:
+  → generate BehaviorNode[] với editorialIntent
+  → propose → evaluate → refine (tự iterate)
+  → calibrate theo Creator Style Graph
+
+Compiler:
+  → intentCompiler.compile() → keyframes
+  → User review ở tầng intent (readable), không phải 200 keyframe
 ```
 
----
-
-## So với Unreal (để bạn dễ map)
-
-| Unreal | Whip |
-|---|---|
-| Sequencer (track theo thời gian) | Timeline + keyframe layer |
-| Blueprint / event trigger | **Behavior** bám anchor |
-| Gameplay event / data binding | **Anchor** từ transcript/beat/subject |
-| Control Rig (procedural) | **Compiler** sinh keyframe |
-| "Bake to keyframes" | Override / Bake |
-
-→ Whip = "Sequencer + Blueprint + Control Rig" cho talking-head. Animation là **hàm của nội dung**,
-không phải bảng keyframe tĩnh.
-
----
-
-## UI: behavior = action-card, không phải keyframe
-
-User **không nhìn keyframe** trên timeline. Họ thấy một **chuỗi action-card nối nhau** (kiểu Unreal
-Sequencer): mỗi behavior là một thẻ có tên + span thời gian.
-
-```
-Clip "interview" ─ actions:
-  ┌──────────────┐ ┌───────────────┐ ┌──────────────┐
-  │ ⚡ Smooth Punch│ │ 🔍 Zoom: graph │ │ ✨ Fade out   │
-  └──────────────┘ └───────────────┘ └──────────────┘
-        0–1.2s          8–12s            14–15s
-  (keyframe ẩn bên dưới — là output compiled của các card này)
-```
-
-- Thêm action = chọn từ thư viện preset (Smooth Punch, Zoom to region…), không đặt keyframe.
-- Sửa card (amount/ease/region) = sửa param, compiler sinh lại keyframe.
-- Muốn tay: mở card → "bake" → curve editor ([Signature Look](./whip-look.md#curve-editor)).
-
-🩻 Scaffold: `ClipPanel` mục **Actions** hiện behavior card (derive từ `kf.source`). TODO: card có
-span, kéo được, gắn vào [Content View](./whip-content-view.md) event.
-
----
-
-## Kết nối với "Whip It" (F11)
-
-Behaviors là nền tảng mà F11 "Whip It" pipeline build trên:
-
-```
-"Whip It" trigger
-    │
-    ├── LLM Art Director → CompositionBrief
-    │        (xác định đoạn nào cần graphic, loại gì)
-    │
-    ├── Asset generation (Seedream + RMBG)
-    │        (tạo visual assets)
-    │
-    └── Gắn behaviors vào assets: ←── ĐÂY LÀ CHỖ BEHAVIORS VÀO
-              sequenceReveal([g1, g2, g3], bind=r_explain)
-              beatPulse(overlay_001, bind=beat_grid)
-              punchOnEmphasis(section_card, bind=cue_emphasis)
-```
-
-Behaviors đảm bảo graphic **tự dời theo content** khi user cắt/chỉnh lại lời nói — không phải đặt keyframe thủ công cho từng asset. Đây là lý do F11 không thể build mà thiếu behavior system.
-
----
-
-## Vì sao điều này hợp với agent
-
-Agent **không rải keyframe** (dễ sai, khó review). Agent làm việc ở tầng **ý nghĩa**:
-
-```
-agent đọc transcript → tạo anchors → gắn behaviors
-   "câu này nói về số liệu → zoomToRegion"
-   "đoạn này liệt kê 3 điểm → sequenceReveal 3 graphic"
-→ compiler lo keyframe. Bạn review ở tầng behavior (đọc được), không phải 200 keyframe.
-```
-
-Đây là lý do behaviors **là** giao diện tự nhiên cho [MCP & Agent](./whip-mcp.md): agent phát
-`bindRegion` + `addBehavior`, không phát `setKeyframe` × 200. Xem skill `autoZoomOnMention`.
+**Đây là lý do behaviors là giao diện tự nhiên cho MCP:** agent phát `synthesize_behaviors(spanId)`, không phát `set_keyframe(t=12.4, scale=1.15)` × 200.

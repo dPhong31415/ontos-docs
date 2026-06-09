@@ -7,304 +7,302 @@ sidebar_position: 3
 
 # Kiến trúc SOTA 2026
 
-> **SOTA** = State of the Art = tiêu chuẩn kỹ thuật tốt nhất hiện tại (2026).
-> Trang này giải thích *tại sao* Whip chọn từng công nghệ và chúng hoạt động cùng nhau thế nào.
+> Trang này giải thích *tại sao* Whip chọn từng công nghệ và chúng liên kết thế nào thành một hệ thống không thể copy rời từng phần.
+> Đây không phải danh sách feature — đây là **lý luận kiến trúc** cho nhà đầu tư và kỹ sư senior.
 
 ---
 
 ## Bức tranh toàn cảnh
 
 ```
-┌─────────────────────────────────────────────────────────────┐
-│  TRÌNH DUYỆT (local — máy của creator)                      │
-│                                                             │
-│  ┌──────────────┐  ┌─────────────────┐  ┌────────────────┐ │
-│  │  UI Thread   │  │  Render Worker  │  │  State Worker  │ │
-│  │              │  │                 │  │                │ │
-│  │  React UI    │  │  WebGPU         │  │  Yjs CRDT      │ │
-│  │  Zustand     │  │  Zero-copy      │  │  Event log     │ │
-│  │  60fps mượt  │  │  VideoFrame     │  │  DAG graph     │ │
-│  └──────┬───────┘  └────────┬────────┘  └───────┬────────┘ │
-│         │                   │                   │          │
-│         └───────────────────┼───────────────────┘          │
-│                             │ SharedWorker                 │
-│                    ┌────────▼────────┐                      │
-│                    │  MCP Server     │  ← agent interface  │
-│                    │  (tool calls)   │                      │
-│                    └────────┬────────┘                      │
-│                             │                               │
-│         ┌───────────────────┼──────────────────┐           │
-│         │                   │                  │           │
-│  ┌──────▼──────┐   ┌────────▼──────┐   ┌───────▼──────┐   │
-│  │    OPFS     │   │  SQLite (DB)  │   │  AI Worker   │   │
-│  │  File SSD   │   │  Semantic idx │   │  Whisper     │   │
-│  │  proxy mp4  │   │  pgvector     │   │  on WebGPU   │   │
-│  └─────────────┘   └───────────────┘   └──────┬───────┘   │
-└────────────────────────────────────────────────┼───────────┘
-                                                 │ HTTPS (on demand)
-                              ┌──────────────────┴──────────┐
-                              │  CLOUD (chỉ khi cần)        │
-                              │  Elixir/Phoenix GenServer   │
-                              │  → collab, persist, share   │
-                              │                             │
-                              │  Modal GPU (heavy AI only)  │
-                              │  → video LLM, stem sep      │
-                              │                             │
-                              │  PostgreSQL + R2/S3         │
-                              │  → events, assets           │
-                              └─────────────────────────────┘
+┌──────────────────────────────────────────────────────────────────────┐
+│  TRÌNH DUYỆT (local — máy của creator, video không rời máy)          │
+│                                                                      │
+│  ┌─────────────┐   ┌──────────────────┐   ┌────────────────────┐    │
+│  │  UI Thread  │   │  Render Worker   │   │   State Worker     │    │
+│  │  React UI   │   │  WebGPU          │   │   OntologyGraph    │    │
+│  │  60fps luôn │   │  GPUExternalTex  │   │   SQLite (local)   │    │
+│  │  Zustand    │   │  OffscreenCanvas │   │   Event log        │    │
+│  └──────┬──────┘   └────────┬─────────┘   └─────────┬──────────┘    │
+│         │                  │                        │               │
+│         └──────────────────┼────────────────────────┘               │
+│                            │ SharedWorker                           │
+│                   ┌────────▼────────┐                               │
+│                   │  MCP Server     │ ← agent / Claude Code attach  │
+│                   │  Semantic tools │                               │
+│                   └────────┬────────┘                               │
+│                            │                                        │
+│         ┌──────────────────┼──────────────────┐                    │
+│         ▼                  ▼                  ▼                    │
+│  ┌─────────────┐  ┌──────────────────┐  ┌──────────────────┐       │
+│  │    OPFS     │  │   Ingestion      │  │   AI Worker      │       │
+│  │  File proxy │  │   Worker         │  │   (on-demand)    │       │
+│  │  720p cache │  │   Whisper ONNX   │  │   LLM synthesis  │       │
+│  │  byte-range │  │   MediaPipe      │  │   Style learning │       │
+│  └─────────────┘  └──────────────────┘  └──────────────────┘       │
+└──────────────────────────────────────────────────────────────────────┘
+                              ↕ HTTPS (chỉ khi cần — persist/share/collab)
+               ┌──────────────────────────────────────────┐
+               │  Elixir/Phoenix — collab, event backup   │
+               │  PostgreSQL — project metadata           │
+               │  R2/S3 — asset storage khi share         │
+               └──────────────────────────────────────────┘
 ```
 
-**Nguyên tắc vàng:** Mọi thứ latency-critical (kéo keyframe, scrub, preview 60fps, AI nhẹ) chạy **hoàn toàn trong trình duyệt**. Server chỉ lo cái không real-time (login, lưu, share, AI nặng).
+**Nguyên tắc vàng:** Mọi thứ latency-critical (scrub, preview, AI nhẹ, render) chạy **hoàn toàn local**. Server chỉ lo cái không real-time (auth, persist, share, collab).
 
 ---
 
-## 1. Thread Architecture — Tại sao UI không bao giờ bị treo
+## 1. Hai Phase Tách Biệt — Ingestion vs Edit
 
-### Vấn đề cần giải quyết
+Đây là insight kiến trúc quan trọng nhất, phân biệt Whip với mọi editor hiện tại.
 
-Browser có 1 **Main Thread** (luồng chính) chạy tất cả: UI, JavaScript, animation. Nếu một tác vụ nặng (decode video, chạy AI) chạy trên luồng này → UI đơ, không kéo được gì.
-
-### Giải pháp: 4 luồng độc lập
-
-**UI Thread** (Main Thread)
-- Chỉ vẽ giao diện React, nhận input từ user
-- KHÔNG bao giờ chạy code nặng
-- Mục tiêu: luôn ≥ 60fps
-
-**Render Worker** (Web Worker + OffscreenCanvas)
-- `OffscreenCanvas` = canvas không gắn vào DOM, chạy trong Worker
-- WebGPU render chạy hoàn toàn trong Worker này
-- Nhận lệnh từ UI Thread qua `postMessage`, render và trả về frame
-
-**State Worker** (Web Worker)
-- Quản lý toàn bộ project state (Yjs CRDT document)
-- Xử lý event sourcing, tính toán DAG graph
-- Giao tiếp với AI Worker và MCP Server
-
-**AI Worker** (Web Worker)
-- Chạy Whisper (transcription) và vision model trên WebGPU
-- Gọi LLM API khi cần quyết định semantic phức tạp
-- Hoàn toàn tách biệt, không ảnh hưởng UI
-
-### Cách chúng giao tiếp
+### Phase 1 — Ingestion (chạy 1 lần khi add video, background)
 
 ```
-UI Thread ──postMessage──▶ State Worker ──tools──▶ MCP Server
-                                │
-                    ┌───────────┴───────────┐
-                    ▼                       ▼
-             Render Worker           AI Worker
-          (frame lên canvas)      (analysis, LLM calls)
+Video file added
+      │
+      ├─── Ingestion Worker (background, không block UI)
+      │         │
+      │    ┌────┴────────────────────────────────────────────┐
+      │    │  Audio pipeline                                 │
+      │    │    WebCodecs → PCM                             │
+      │    │    Whisper ONNX (WebGPU) → Word[]              │
+      │    │      {id: uuid, w, start, end, confidence}     │
+      │    │    Web Audio API → Acoustic[]                  │
+      │    │      {t, energy, pitch, rms} per 10ms          │
+      │    │    pyannote ONNX → Speaker[]                   │
+      │    │      {speakerId, start, end}                   │
+      │    │                                                │
+      │    │  Visual pipeline                               │
+      │    │    WebCodecs → VideoFrame[] (hardware decode)  │
+      │    │    MediaPipe FaceLandmarker →                  │
+      │    │      FaceEvent[] {frameT, expression, lookAt}  │
+      │    │    MediaPipe GestureRecognizer →               │
+      │    │      GestureEvent[] {frameT, gesture}          │
+      │    │    MediaPipe PoseLandmarker →                  │
+      │    │      PoseEvent[] {frameT, motion_delta}        │
+      │    └────────────────────────────────────────────────┘
+      │         │ all local, $0, hardware-accelerated
+      │         ▼
+      │    OntologyGraph (SQLite, State Worker)
+      │    → TemporalSpan[] aggregated từ signals
+      │         │
+      │    AI Worker (LLM synthesis — 1 lần)
+      │    → Claude Haiku nhận TEXT SUMMARY (không phải pixel)
+      │      "Span 00:00–00:45: energy=0.9, gesture=pointing,
+      │       words='đây là điều quan trọng nhất', tone=emphatic"
+      │    → BehaviorNode[] với open editorial intents
+      │    → lưu vào OntologyGraph
+      │
+      DONE. Video đã được semantic-indexed.
+      User bắt đầu edit được ngay với partial results.
 ```
+
+### Phase 2 — Edit (compute thuần, không có model inference)
+
+```
+User cut tại Word w_042
+      │
+      ├─ mark Word[w_042...].visible = false          O(1)
+      ├─ query: BehaviorNodes với anchor trong visible words  O(n)
+      ├─ update TemporalSpan boundaries               O(n)
+      └─ CompileRender() → keyframes                  O(n)
+
+Không có API call.
+Không có model inference.
+Không có frame processing.
+Thuần compute từ OntologyGraph đã index.
+```
+
+**Analogy:** Elasticsearch không re-parse document mỗi lần search. Whip không re-run MediaPipe mỗi lần user kéo timeline.
 
 ---
 
-## 2. Zero-Copy Pipeline — Render 4K không qua CPU
+## 2. OntologyGraph — Não của Hệ Thống
 
-### Vấn đề với WebGL cũ (đang dùng)
-
-Hiện tại Whip dùng PixiJS/WebGL. Flow render một frame:
+Thay vì lưu timeline như mảng thời gian (CapCut/Premiere), Whip lưu một **đồ thị ngữ nghĩa có kiểu** (typed semantic graph):
 
 ```
-Video file → CPU decode → CPU sao chép pixel → GPU texture → Render
-                ↑ bottleneck ở đây — CPU phải đụng vào từng pixel
+Object Types:
+  Word          → 1 từ transcribed, stable UUID, visible/hidden state
+  FaceEvent     → 1 khoảnh khắc visual: expression, lookAt, landmarks
+  GestureEvent  → 1 gesture được detect: pointing, open_hands, nodding
+  PoseEvent     → body motion intensity tại thời điểm t
+  Acoustic      → energy/pitch/rms tại t (10ms resolution)
+  TemporalSpan  → aggregated semantic closure [start, end] chứa tất cả signals
+  BehaviorNode  → editorial intent do LLM generate, anchored to word_id
+  EditorialDecision → user override của BehaviorNode (không xóa original)
+
+Link Types (typed edges):
+  Word          --[PART_OF]-->     TemporalSpan
+  FaceEvent     --[PART_OF]-->     TemporalSpan
+  GestureEvent  --[PART_OF]-->     TemporalSpan
+  TemporalSpan  --[CONTAINS]-->    TemporalSpan   (hierarchy: chapter > section)
+  TemporalSpan  --[FOLLOWS]-->     TemporalSpan   (sequence)
+  BehaviorNode  --[ANCHORED_TO]--> Word | VisualEvent
+  BehaviorNode  --[CROSS_MODAL]--> BehaviorNode   (audio+visual trigger cùng intent)
+  EditorialDecision --[OVERRIDES]-> BehaviorNode
+
+Provenance trên mọi object:
+  { source: "whisper_onnx" | "mediapipe" | "claude_haiku" | "human" | "agent",
+    confidence: 0–1, modelId, createdAt }
 ```
 
-Với video 4K, mỗi frame có 8.3 triệu pixel. CPU copy 8.3M pixel × 30fps = **249M pixel/giây** → tốn tài nguyên, pin cạn nhanh, frame drop.
-
-### Giải pháp: WebGPU + GPUExternalTexture (Roadmap v2)
-
-**WebCodecs** = Web API decode video bằng phần cứng (GPU hoặc chip decode riêng), ra `VideoFrame`.
-
-**GPUExternalTexture** = WebGPU API map `VideoFrame` trực tiếp thành GPU texture — CPU không sao chép pixel.
-
-```
-Video file → WebCodecs decode (phần cứng) → VideoFrame
-                                                 │ GPUExternalTexture (zero-copy)
-                                                 ▼
-                                           GPU Texture → WGSL Shader → Render
-```
-
-**Kết quả:** CPU gần như không làm gì trong quá trình render. 4K 60fps mượt. Pin tiêu thụ ít hơn 60%.
-
-### Trạng thái hiện tại
-
-- ✅ **Đang dùng**: PixiJS + WebGL — hoạt động ổn cho đến 1080p
-- ❌ **Roadmap v2**: WebGPU zero-copy pipeline — cần khi target 4K + file lớn
+Agent traverse graph này để ra quyết định editorial — không cần RAG, không cần vector search, vì **relationships đã explicit**.
 
 ---
 
-## 3. OPFS — Xử lý file 50GB không crash
+## 3. Thread Architecture — UI Không Bao Giờ Bị Treo
 
-### Vấn đề
-
-Tab trình duyệt giới hạn RAM ~2-4GB (V8 Heap Limit). Load file 50GB từ máy quay Sony → crash ngay.
-
-### Giải pháp: File System Access API + OPFS (Roadmap v2)
-
-**File System Access API**: Trình duyệt xin quyền đọc file trực tiếp từ ổ cứng user, không tải vào RAM.
-
-**OPFS** (Origin Private File System): Vùng lưu trữ riêng của app trong trình duyệt — nhanh hơn `localStorage`, hỗ trợ file lớn, đọc/ghi bằng API stream.
-
-**Proxy workflow**:
 ```
-File gốc 50GB (SSD) ──đọc theo byte range──▶ WebCodecs decode (từng frame)
-                                                       │ (ngay sau render)
-                                               Giải phóng bộ nhớ
+UI Thread        → React render, input. KHÔNG chạy code nặng. Luôn ≥60fps.
+                   Nhận diffs từ State Worker, không nhận toàn bộ state.
 
-Song song: tạo bản proxy 720p → OPFS (background Worker)
-           User edit trên proxy → nhanh, nhẹ
-           Khi export → đọc lại file gốc 50GB để render chất lượng cao
+State Worker     → OntologyGraph SQLite, event sourcing.
+                   Nhận mutations → compute → emit diffs → UI Thread.
+                   Là single source of truth.
+
+Render Worker    → WebGPU + OffscreenCanvas.
+                   GPUExternalTexture: VideoFrame → GPU texture, CPU không touch pixel.
+                   4K 60fps, pin tiêu thụ giảm 60%.
+
+Ingestion Worker → Whisper ONNX + MediaPipe. Chạy khi video added.
+                   Progressive: audio xong trước → emit Word[] → UI update.
+                   Visual xong sau → emit VisualEvent[] → UI update thêm.
+
+AI Worker        → LLM synthesis (on-demand). Gọi khi ingestion xong.
+                   Nhận text summary, trả BehaviorNode[].
+                   Kết quả cache vào OntologyGraph, không gọi lại.
+
+MCP Server       → SharedWorker. Agent và user cùng nhìn 1 OntologyGraph.
+                   Expose semantic actions, không expose UI operations.
 ```
+
+Message schema giữa workers: **diffs only** (không serialize toàn bộ state), typed (Zod schema), versioned (optimistic concurrency).
 
 ---
 
-## 4. Yjs CRDT — State không bao giờ bị mất
+## 4. AI Layer — Local-First, Zero Video Upload
 
-### Vấn đề với state thông thường
+**Nguyên tắc không thể thỏa hiệp:** Video file không bao giờ rời máy user.
 
-Mọi app thông thường lưu state theo kiểu **snapshot**: "đây là trạng thái hiện tại". Khi mất kết nối mạng hoặc nhiều người edit cùng lúc → conflict, dữ liệu mất.
+| Model | Input | Chạy ở đâu | Backend | Cost |
+|---|---|---|---|---|
+| Whisper ONNX (base) | PCM audio | Ingestion Worker | **WASM+SIMD** (faster than WebGPU on decoder loop) | $0 |
+| MediaPipe FaceLandmarker | VideoFrame (local) | Ingestion Worker | **WebGL2 delegate** (WebGPU support in progress #5029) | $0 |
+| MediaPipe GestureRecognizer | VideoFrame (local) | Ingestion Worker | WebGL2 delegate | $0 |
+| MediaPipe PoseLandmarker | VideoFrame (local) | Ingestion Worker | WebGL2 delegate | $0 |
+| pyannote ONNX | PCM audio | Ingestion Worker | WASM | $0 |
+| RMBG | Image frame (local) | AI Worker | WebGPU compute | $0 |
+| Claude Haiku | **Text only** — structured summary | AI Worker → API | Claude API | ~$0.001/phút video |
+| Deepgram (fallback transcription) | Audio only | API | Cloud | $0.004/phút |
 
-### Giải pháp: Yjs CRDT (Roadmap v3)
+**Không có model nào nhận pixel từ video file lên cloud.** MediaPipe xử lý pixel local trả structured data. Claude chỉ nhận text summary.
 
-**CRDT** (Conflict-free Replicated Data Type): Cấu trúc dữ liệu được thiết kế đặc biệt để nhiều bản sao có thể thay đổi độc lập và luôn có thể merge lại mà không bao giờ conflict — bằng toán học, không phải "ai thắng ai".
+30 phút video: tổng chi phí AI ≈ **$0.03**. So sánh TwelveLabs: $12/30 phút.
 
-**Yjs** là thư viện CRDT phổ biến nhất (Figma, Linear, Notion đều dùng). Compile qua **WebAssembly** để chạy ở tốc độ native trong trình duyệt.
+> **Honest note — Whisper backend:** Community benchmarks (Transformers.js issue #894) trên Mac M2 cho thấy Whisper-base WASM+SIMD (~5.9s/60s audio) nhanh hơn WebGPU (~9.5s/60s audio). Lý do: autoregressive decoder loop là bottleneck — GPU underutilized giữa các decode step. WebGPU thắng cho parallelizable workloads (ViT encoder, diffusion), WASM thắng cho sequential decoder. Whisper-base WASM là lựa chọn đúng.
 
-**Kết quả:**
-- Mất mạng giữa chừng → tiếp tục edit local, sync lại khi có mạng, không mất gì
-- 2 người edit cùng clip → tự động merge, không conflict
-- Undo/Redo vô hạn — CRDT lưu toàn bộ lịch sử dưới dạng operations
+> **Honest note — MediaPipe backend:** MediaPipe Tasks for Web dùng TFLite WASM + WebGL2 delegate làm default. Native WebGPU backend đang trong progress (GitHub issue #5029). Face mesh và hand tracking chạy 50–300 FPS trên desktop; BlazePose Heavy (full body) gần hơn 20–60 FPS. Whip dùng WebGL2 path hiện tại, sẽ migrate sang WebGPU khi stable.
 
----
+### Tại sao không dùng Gemini/GPT-Vision để analyze frames?
 
-## 5. MCP Server — Giao diện cho AI Agent
+Frame sampling → cloud vision model = *pixel → text description*. Đây **không phải** semantic understanding vì:
+- Mất temporal continuity giữa các frames
+- Cloud model mô tả *what it sees*, không hiểu *flow* qua thời gian
+- Chi phí cao, video data gửi lên cloud
+- MediaPipe chạy TRÊN MỌI FRAME local, cho dense temporal signal (30fps × duration) tốt hơn sparse sampling
 
-### Vấn đề với "AI edit" hiện tại
+### Về Temporal Grounding — Honest Assessment
 
-AI hiện tại tương tác với editor qua text prompt → editor interpret → thực thi. Không reliable, không atomic.
+UniTime (NeurIPS 2025) là SOTA cho temporal grounding nhưng cần 7B+ parameter model — **không chạy được in-browser 2026**. Smallest viable: ~1B params (Qwen2-VL-1B class), latency 5–30s trên GPU server cho 60s clip.
 
-### Giải pháp: MCP Server trong SharedWorker
-
-**MCP** (Model Context Protocol): Chuẩn mở của Anthropic để AI model gọi tools theo cách structured, có type, có schema rõ ràng.
-
-**SharedWorker**: Web Worker dùng chung giữa nhiều tab — MCP Server chạy ở đây, mọi tab Whip đều connect được.
-
-```
-Claude / GPT          Whip MCP Server (SharedWorker)
-     │                        │
-     │ call: split_clip       │
-     │ { id: "clip_001",      │──▶ State Worker
-     │   at: 5.0 }            │    → split clip
-     │                        │    → recalculate anchors
-     │◀── result: success ────│    → emit event
-```
-
-**Tools hiện có (scaffold):**
-- `get_project` — lấy tóm tắt project (không dump toàn bộ JSON)
-- `split_clip` — cắt clip tại timestamp
-- `add_behavior` — thêm behavior vào clip
-- `apply_preset` — áp preset caption/style
-- `render` — export ra file
-
-**Nguyên tắc quan trọng:** Agent không nhận toàn bộ JSON (quá lớn, tốn token). Nhận đúng context cần — 1 clip + surrounding beats + anchor info.
+Whip V1 approach: Claude Haiku nhận **text summary** của signals → semantic spans. Accuracy thấp hơn UniTime nhưng:
+- Runs on-device (text synthesis, không phải video understanding)
+- Latency < 2s cho summary
+- V2 path: khi WebNN (Web Neural Network API — Chrome 128+) mature và edge models shrink → migrate sang on-device grounding
 
 ---
 
-## 6. Transport Layer — Sync với Server
-
-### Hiện tại (v1): HTTP thường
-
-API call khi cần (save, load, share). Không real-time.
-
-### Roadmap v3: WebTransport (QUIC/HTTP3)
-
-**WebTransport** thay thế WebSocket cho media-heavy app vì giải quyết **Head-of-line blocking**:
-
-> WebSocket chạy trên TCP. TCP đảm bảo gói tin đến đúng thứ tự — nếu rớt 1 gói, toàn bộ stream sau đó chờ. Với video, điều này gây lag.
-
-**QUIC** (nền tảng của HTTP/3) chạy trên UDP, hỗ trợ **multiplexing** (nhiều stream độc lập):
+## 5. OPFS + File System Access — Xử Lý File 50GB
 
 ```
-WebTransport
-  ├── Stream Reliable (CRDT delta sync) → đảm bảo state đúng
-  └── Stream Unreliable (video preview) → rớt frame OK, không chờ
+File gốc (SSD, không load vào RAM)
+    │ byte-range read (chỉ đọc frame cần render)
+    ▼
+WebCodecs decode (hardware) → VideoFrame
+    │ GPUExternalTexture (zero-copy)
+    ▼
+GPU → Render → Canvas
+
+Song song (background):
+    → tạo proxy 720p → OPFS (nhanh, nhẹ, cho edit preview)
+    → Khi export: đọc lại file gốc để render chất lượng cao
 ```
+
+Tab browser giới hạn RAM ~2-4GB. File 50GB → crash với mọi editor khác. Whip không bao giờ load toàn file vào RAM.
 
 ---
 
-## 7. AI Layer — Local vs Cloud
+## 6. Agent Architecture — SOTA 2026 (Anthropic Pattern)
 
-### Hiện tại (v1)
+Whip không implement "AI suggest → user click accept". Whip implement **agent thực sự execute** trên semantic layer.
 
-| Tác vụ | Cách làm hiện tại | Ghi chú |
-|---|---|---|
-| Transcription (caption) | Deepgram API — audio file gửi lên cloud | ✅ hoạt động, video không gửi — chỉ audio |
-| Semantic scene analysis | TwelveLabs API — **video upload** | ⚠️ Sẽ bị replace — video rời máy, chậm, tốn tiền |
-| Beat detection | Chưa có | ❌ |
-| Vision / scene type | Chưa có | ❌ |
+Theo Anthropic workshop 2025: **specialized sub-agents > single generalist agent**.
 
-### Roadmap v2 — Local-first AI (video không rời máy)
+```
+Orchestrator Agent
+      │
+      ├── Analyzer Agent
+      │     Tools: get_temporal_spans(), get_span_detail(), get_visual_events()
+      │     Input: OntologyGraph slice (không phải toàn bộ)
+      │     Output: semantic understanding — text, có thể review
+      │
+      ├── Editor Agent
+      │     Input: Analyzer output + Creator Style Graph
+      │     Output: BehaviorNode[] với open editorial intents
+      │     Pattern: propose → evaluate → refine (tự iterate)
+      │
+      └── Validator Agent
+            Input: BehaviorNode[] + project constraints
+            Output: approve / conflict flags / alternatives
+```
 
-| Model | Dùng cho | Chạy ở đâu | Status |
-|---|---|---|---|
-| Whisper tiny/base (ONNX) | Transcription local không cần API | WebGPU Worker | ❌ roadmap |
-| Vision model nhỏ (MobileNet/EfficientNet) | Scene type, energy per-frame | WebGPU Worker | ❌ roadmap |
-| Beat detection (DSP) | BPM, beat timestamps từ audio | Web Worker | ❌ roadmap |
-| Frame sampler | 5-10 frames → gửi lên vision LLM | Local sampling, cloud inference | 🔄 planned |
-
-### Cloud AI — Chỉ inference nhẹ, không upload video
-
-**Nguyên tắc quan trọng:** Cloud AI chỉ nhận **frames** (ảnh tĩnh) hoặc **text** — **không bao giờ nhận video file**. Video luôn ở máy user.
-
-| Model | Input gửi lên | Dùng cho |
-|---|---|---|
-| Gemini 2.0 Flash | 5-10 frames (ảnh JPG nhỏ) + transcript | Semantic scene description, chapters |
-| Claude Sonnet | Text only (transcript + metadata) | Cut optimization, reasoning |
-| Whisper large-v3 (API) | Audio file (không phải video) | Transcription chất lượng cao |
-| Modal GPU | Audio only | Stem separation (tách nhạc/vocal) |
-
-**Nguyên tắc:** Local trước → cloud chỉ nhận frames/text, không nhận video → API cost thấp.
+**Không RAG.** Agent dùng typed tools để query OntologyGraph — data là structured, relationships là explicit, không cần vector similarity. File-based (Karpathy pattern): `project.whip` JSON fit trong context window cho small-medium projects; typed tools expose slice cho large projects.
 
 ---
 
-## 8. Storage
-
-### Hiện tại
+## 7. Storage — Phân Tầng
 
 ```
-project.whip (JSON) → Supabase / localStorage
-assets → blob URLs trong RAM
-```
+Local (realtime):
+  OPFS/nodes/        ← mỗi OntologyGraph object = 1 file (concurrent write safe)
+  OPFS/events.log    ← append-only (infinite undo/redo)
+  SQLite (wa-sqlite) ← semantic index, query nhanh, pgvector cho Moat 4
+  OPFS/proxy/        ← video proxy 720p
 
-### Roadmap v2: Phân tầng
-
-```
-OPFS
-├── nodes/                    ← mỗi node 1 file (concurrent write an toàn)
-├── events.log                ← append-only (undo/redo history)
-├── semantic.db               ← SQLite (wa-sqlite): query nodes, store embeddings
-└── proxy/                    ← video proxy 720p
-
-PostgreSQL (server)
-├── events (append-only)      ← backup event log
-└── projects (metadata)
-
-R2/S3
-└── original assets           ← file gốc 4K khi cần share/export
+Server (on-demand):
+  PostgreSQL         ← event log backup, project metadata
+  R2/S3              ← asset storage khi share/export
+  Elixir/Phoenix     ← collab sync, auth
 ```
 
 ---
 
-## So sánh: Hiện tại vs Target
+## 8. So Sánh: Whip vs Mọi Đối Thủ
 
-| Component | Hiện tại (v1) | Target (v2/v3) |
-|---|---|---|
-| Renderer | PixiJS + WebGL | WebGPU + GPUExternalTexture |
-| File handling | Blob URL (RAM) | OPFS + byte-range streaming |
-| State | Zustand (mutable) | Yjs CRDT (immutable ops log) |
-| AI inference | API-only | Local WebGPU + API fallback |
-| Transport | HTTP fetch | WebTransport (QUIC) |
-| Storage | JSON + Supabase | SQLite OPFS + PostgreSQL |
-| Agent interface | window.whip (hacky) | MCP Server (SharedWorker) |
+| | Premiere | CapCut Web | Descript | VideoEdit MCP | Whip |
+|---|---|---|---|---|---|
+| State model | Mảng thời gian | Mảng thời gian | Text-centric | Frame/timecode | **Semantic graph** |
+| Video processing | CPU | WebAssembly/local | Server upload | FFmpeg local | **WebCodecs+WebGL2** |
+| AI understanding | Cloud Sensei | Server-side AI | Transcript (Whisper) | None | **Local signals (MediaPipe+Whisper)** |
+| Agent interface | Partial (adb-mcp, fragile) | Không | Không | ✅ MCP (timecode-based) | **Semantic MCP (word_id)** |
+| Cut invariance | Không | Không | Partial (text edit) | Không | **Word-ID anchored** |
+| Creator learning | Không | Không | Không | Không | **Style Graph (data flywheel)** |
+| Cross-modal signals | Không | Không | Không | Không | **Audio+Visual+Caption** |
+| File limit | ~8GB RAM | Upload limit | Upload limit | OS limit | **Unlimited (OPFS byte-range)** |
+| Cost/30min | N/A | ~$5 server | ~$5 AI | $0 (FFmpeg) | **~$0.03 AI** |
+| Open vocabulary behaviors | Không | Không | Không | Không | **LLM-generated intents** |
+
+**VideoEdit MCP** (videoeditmcp.com) là tool closest đến Whip về agent-native design, nhưng expose timecode-based operations, không semantic. Không có OntologyGraph, không có word_id anchoring, không có creator style learning.

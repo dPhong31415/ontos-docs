@@ -7,174 +7,338 @@ sidebar_position: 2
 
 # Tại sao Whip sẽ thắng — 5 Moat
 
-> **Moat** (hào phòng thủ) = thứ khiến đối thủ khó copy, dù họ có tiền và kỹ sư.
-> Mỗi moat dưới đây đều có lý do kỹ thuật + kinh doanh cụ thể vì sao Adobe/CapCut không thể làm được nhanh.
+> **Moat** = thứ khiến đối thủ khó copy, dù họ có tiền và kỹ sư.
+> Mỗi moat dưới đây có lý do kỹ thuật cụ thể **vì sao Adobe/CapCut không thể làm được trong 2 năm**.
+> Quan trọng hơn: 5 moat này **khuếch đại lẫn nhau** — không phải 5 feature độc lập.
 
 ---
 
-## Moat 1 — Semantic Temporal Graph (kiến trúc dữ liệu mới)
+## Moat 1 — Semantic Temporal Graph (Kiến trúc dữ liệu mới)
 
-### Vấn đề của đối thủ
+### Vấn đề của mọi editor hiện tại
 
-Premiere Pro, DaVinci, CapCut đều lưu timeline như một **mảng thời gian**:
-
-```
-clip_001: { start: 5.0s, end: 8.0s }
-subtitle_001: { start: 5.0s, end: 8.0s }
-```
-
-Hai thứ ghim vào cùng một giây — nhưng không có quan hệ gì với nhau trong dữ liệu. Khi bạn dời clip, subtitle không biết mà tự dời theo. Bạn phải làm tay.
-
-Adobe có 30 năm code theo kiến trúc này. Để đổi thành Semantic Graph, họ phải **viết lại từ đầu** — không thể refactor dần.
-
-### Cách Whip làm
-
-Whip lưu timeline như một **đồ thị quan hệ** (graph). Mỗi phần tử có "neo" (anchor) chỉ định nó phụ thuộc vào cái gì:
+Premiere, DaVinci, CapCut đều lưu timeline như **mảng thời gian tuyệt đối**:
 
 ```
-subtitle_001.anchor = { type: "phoneme", word: "xin chào", clip: "audio_track_1" }
-sfx_whoosh.anchor   = { type: "node_event", target: "transition_001", event: "center" }
-broll_001.anchor    = { type: "semantic_keyword", keyword: "sản phẩm này" }
+zoom_keyframe: { t: 12.4s, scale: 1.15 }
+subtitle:      { start: 12.4s, end: 14.0s }
 ```
 
-Khi một phần tử thay đổi, hệ thống tự lan truyền ảnh hưởng qua graph — giống cách Excel tính lại ô khi bạn đổi một ô khác.
+Hai thứ này không có quan hệ gì trong data. Cắt lại câu nói → `subtitle` dời sang 14.0s nhưng `zoom_keyframe` vẫn ở 12.4s. Phải sửa tay. Mỗi lần chỉnh nội dung là animation vỡ. Đây là vấn đề 30 năm của After Effects — không thể fix mà không rebuild từ đầu.
 
-### Tại sao đây là moat
+### Whip: Semantic Temporal Graph + Two-Phase Pipeline
 
-- **Adobe không thể copy trong 2 năm** vì Premiere codebase là C++ monolith 30 năm tuổi
-- **CapCut không có động cơ** — họ target người dùng casual, không cần graph phức tạp
-- **Whip xây từ ngày 1** theo kiến trúc này — không có technical debt
+**Bước 1 — Ingestion (chạy 1 lần khi add video, background):**
 
-:::info Xem thêm
-[F10 — Semantic Anchor DAG (v2)](./whip-features) · [F4 — SmartLink v1 (live)](./whip-features)
-:::
+```
+Video → Ingestion Worker (local, không upload)
+    Audio: Whisper ONNX (WebGPU) → Word[] {id: uuid, w, start, end}
+           Web Audio API         → Acoustic[] {t, energy, pitch}
+           pyannote ONNX         → Speaker[] {speakerId, start, end}
+    Video: MediaPipe FaceLandmarker  → FaceEvent[] {t, expression, lookAt}
+           MediaPipe GestureRecognizer → GestureEvent[] {t, gesture}
+           MediaPipe PoseLandmarker   → PoseEvent[] {t, motion_delta}
+
+→ OntologyGraph (typed semantic graph, SQLite local):
+    Objects: Word, FaceEvent, GestureEvent, TemporalSpan, BehaviorNode
+    Links:   PART_OF, ANCHORED_TO, CROSS_MODAL, FOLLOWS, CONTAINS
+    Provenance: source, confidence, modelId trên mọi object
+```
+
+**Bước 2 — Edit (compute thuần từ graph, không có model inference):**
+
+```
+User cut tại Word[w_042]
+  → mark words[w_042...].visible = false          ← O(1)
+  → query BehaviorNodes anchored to visible words  ← O(n)
+  → recompile keyframes                            ← O(n)
+  Không API call. Không model inference. Thuần compute.
+```
+
+**Tại sao đây là moat:**
+- Anchor vào `word_id` (stable UUID) thay vì timestamp → **cut-proof**: cắt bỏ 10 từ → behaviors tự co theo, không vỡ
+- Typed graph với provenance → agent traverse được, không cần RAG
+- Adobe cần **rebuild lại từ đầu** — 30 năm C++ monolith không thể refactor sang graph
+- CapCut không có động cơ — họ target casual user, không cần semantic precision
 
 ---
 
-## Moat 2 — Local-First + WebGPU (chạy trên browser, không cần cài)
+## Moat 2 — Local-First + Browser-Native Compute (Video không rời máy)
 
 ### Vấn đề hiện tại
 
-- Premiere/DaVinci: phải cài app 10-30GB, cần GPU mạnh
-- CapCut web: chậm, file lớn là crash
-- Mọi web editor: đẩy file lên server → xử lý → trả về (tốn tiền, privacy issue, latency cao)
+- Premiere/DaVinci: cài 10-30GB, cần GPU mạnh, không web
+- CapCut web: dùng WebAssembly + WebCodecs cho rendering (solid) nhưng AI features là **server-side ByteDance infrastructure** — data sovereignty concern, U.S. operations đang bị scrutiny
+- Descript: audio-centric, Whisper qua OpenAI API (cloud), Temporal.io backend cho AI jobs
+- **Mọi web editor**: AI analysis = gửi video lên cloud → latency cao, tốn tiền, data leak
+- TwelveLabs: video understanding API tốt nhất hiện tại, nhưng video phải upload → $12/30 phút
 
-### Cách Whip làm
+### Whip: Zero-Upload AI + Dense Local Signals
 
-**WebGPU** (2026 standard): cho phép trình duyệt truy cập GPU trực tiếp với hiệu năng gần native.
+**Signal extraction local (ingestion-time, 1 lần khi import):**
+```
+MediaPipe (WebGL2 delegate) chạy qua toàn bộ video 1 lần
+→ FaceEvent[] + GestureEvent[] + PoseEvent[] cache vào OntologyGraph
+→ $0, không upload frame nào, không phụ thuộc cloud
 
-**Zero-copy pipeline** (giải thích thuật ngữ): Thông thường khi render video, CPU phải "sao chép" dữ liệu pixel từ RAM lên GPU — tốn thời gian và gây crash khi file lớn. WebGPU cho phép video decode thẳng lên GPU texture, CPU không phải chạm vào từng pixel — gọi là "zero-copy".
+Whisper ONNX (WASM+SIMD — faster than WebGPU for decoder loop)
+→ Word[] với UUID per word, confidence per word
+→ ~5.9s cho 60s audio trên desktop, $0
 
-**OPFS** (Origin Private File System — giải thích): Thay vì "tải" file 50GB vào trình duyệt (crash ngay), Whip chỉ "xin đọc" file từ ổ cứng của bạn. Engine chỉ đọc đúng phần cần render ngay lúc đó, giải phóng bộ nhớ ngay sau. File không bao giờ rời máy bạn.
+Benchmark thực: WASM+SIMD beats WebGPU cho Whisper vì autoregressive
+decoder bottleneck. GPU underutilized giữa decode steps.
+(nguồn: Transformers.js issue #894, Mac M2 benchmark)
+```
 
-**Kết quả:** Render 4K 60fps trong trình duyệt, file 50GB không crash, không upload lên server.
+**GPUExternalTexture zero-copy render:**
+```
+File SSD → WebCodecs (hardware decode) → VideoFrame
+                                              │ GPUExternalTexture (zero-copy)
+                                              │ CPU không touch pixel
+                                              ▼
+                                         GPU Texture → WGSL Shader → Canvas
+```
+CPU gần như idle trong render. WebGPU compute: ~1ms/frame desktop (vs 10–20ms JS pixel loop).
+Benchmark: web.dev AI Video Upscaler case study — 250k MAU, 10,000 videos/ngày, $0 server cost.
 
-### Tại sao đây là moat
+**OPFS — file 50GB không crash:**
+```
+Không load file vào RAM. Byte-range read từ SSD đúng frame cần thiết.
+Tab browser limit ~2–4GB RAM. File 50GB → crash mọi editor khác. Whip không bao giờ full-load.
+Background: tạo proxy 720p → edit preview nhanh. Export: đọc lại gốc 4K.
+```
 
-- **Adobe** đang cố làm web (Adobe Express) nhưng bị giới hạn bởi legacy architecture
-- **CapCut web** không có team đủ mạnh để implement WebGPU pipeline phức tạp này
-- **Khi Whip làm được điều này**, barrier to entry (rào cản vào ngành) gần như biến mất — bất kỳ creator nào có laptop cũng dùng được
+**Chi phí AI thực tế:**
+- MediaPipe (gesture/expression/pose): **$0**, WebGL2 local
+- Whisper ONNX (transcription): **$0**, WASM+SIMD local
+- RMBG (background removal): **$0**, WebGPU compute local
+- Claude Haiku (text-only synthesis): ~$0.001/phút
+- Deepgram (transcription fallback nếu cần): $0.004/phút
+- **30 phút video: ~$0.03 tổng**. TwelveLabs: $12. CapCut AI: $5+ server cost.
+
+**Tại sao đây là moat:**
+- WebCodecs + GPUExternalTexture + OPFS pipeline cần expertise browser internals sâu — không copy được
+- MediaPipe WebGL2 ingestion-time (toàn bộ video, dense signals) chưa có editor nào làm được
+- Privacy moat: video không rời máy → unbeatable cho enterprise, legal, medical content
+- CapCut có WebAssembly pipeline tương tự cho rendering, nhưng AI vẫn server-side ByteDance — trust issue chết người ở Western market
 
 ---
 
-## Moat 3 — Agent thật sự điều khiển được (MCP)
+## Moat 3 — Agent Thật Sự Điều Khiển Được (Semantic MCP)
 
-### Vấn đề hiện tại
+### Vấn đề với "AI edit" hiện tại
 
-Mọi "AI edit" hiện nay đều là **AI gợi ý, người thực thi**:
-- CapCut AI: "Tôi suggest cắt tại đây" → bạn click Accept
-- Adobe Firefly: generate ảnh, nhưng bạn tự paste vào timeline
-- Opus Clip: AI crop tự động, nhưng fine-tune bắt buộc phải tay
+Mọi "AI edit" hiện tại là **pipeline, không phải agent**: upload → cloud process → download. AI không *hiểu* timeline — nó produces output.
 
-### Cách Whip làm
+- **Descript Underlord**: text edit → video follow. Đúng hướng, nhưng text-only. Không có visual semantic, không có behaviors, không có cross-modal understanding.
+- **adb-mcp** (Adobe Premiere qua MCP): UI automation fragile, không semantic. Agent gọi `click_button("Cut")` không phải `cut_at_word("w_042")`.
+- **VideoEdit MCP** (videoeditmcp.com — 2025): agent-native, expose NLE semantics (tracks, clips, keyframes). Tốt nhất hiện tại về **agent interface**, nhưng vẫn **timecode-based**. Không có OntologyGraph, không có word_id anchoring, không có cross-modal signals. Agent biết "cắt tại giây 14.2" không biết "cắt sau câu vừa rồi".
+- **JianYing MCP** (CapCut desktop Python wrapper): template automation, không creative reasoning.
 
-**MCP** (Model Context Protocol — giải thích): Chuẩn giao tiếp để AI model (Claude, GPT) gọi trực tiếp các hành động trong app — không phải "gợi ý", mà là "thực thi". Giống như bàn phím và chuột, nhưng dành cho AI.
+### Whip: Agent Làm Việc Trên Semantic Layer — Khác Hoàn Toàn
 
+**VideoEdit MCP (best competitor):**
 ```
-AI Agent gọi:  split_clip("clip_001", at=5.0)
-               add_behavior("zoom_punch", target="clip_001", at=region_001)
-               apply_caption_preset("loud", track="caption_track_1")
-               render(output="final.mp4")
+agent → split_clip(clipId, t=14.2)        ← timecode, không semantic
+agent → set_keyframe(prop="scale", t=14.2, value=1.15)  ← pixel, không intent
 ```
 
-**Kết quả:** Bạn nói "edit video này style TikTok viral, cắt theo nhịp beat, thêm caption loud" — AI làm toàn bộ, không cần bạn click gì.
+**Whip MCP:**
+```
+agent → cut_at_word(wordId="w_3f8a2b")     ← word UUID, stable sau mọi edits
+agent → synthesize_behaviors("span_003")   ← output: BehaviorNode[] với intents
+agent → apply_creator_style()              ← calibrate theo Style Graph
+```
 
-**Semantic Temporal Graph + MCP = combo chết người:** AI hiểu *ý nghĩa* của từng phần tử nên có thể ra quyết định thông minh, không chỉ thực hiện lệnh mù.
+**Sự khác biệt cốt lõi:** VideoEdit MCP biết *vị trí* trong timeline. Whip MCP biết *ý nghĩa* của nội dung tại vị trí đó.
 
-### Tại sao đây là moat
+**Anthropic multi-agent pattern:**
+```
+Orchestrator Agent
+    │
+    ├── Analyzer Agent
+    │     Tools: get_temporal_spans(), get_span_detail()
+    │     Input: OntologyGraph slice (không phải toàn bộ — progressive disclosure)
+    │     Output: semantic understanding — readable, reviewable, auditable
+    │
+    ├── Editor Agent
+    │     Input: Analyzer output + Creator Style Graph
+    │     Output: BehaviorNode[] với open editorial intents
+    │     Pattern: propose → evaluate → refine (self-iterate)
+    │
+    └── Validator Agent
+          Input: BehaviorNode[] + project constraints
+          Output: approve / conflict flags / alternatives
+```
 
-- **Adobe** đang làm AI nhưng không có graph layer → AI không hiểu semantic context
-- **CapCut** không có MCP server → AI chỉ preset, không customizable
-- **Whip MCP** là standard mở → developer third-party có thể build agent cho Whip
+**Không RAG.** OntologyGraph là typed structured data — relationships explicit, agent query deterministic. `project.whip` JSON fits in 200K context window (Karpathy file-based pattern).
 
-:::info Xem thêm
-[MCP & Agent Skills](./whip-mcp) — tool surface đầy đủ + workflow examples · [Command API](./whip-api)
-:::
+**Tại sao đây là moat:**
+- VideoEdit MCP là closest competitor — timecode-based vs semantic-based là architectural gap, không phải feature gap
+- CapCut không có MCP, không có semantic graph — AI của họ chỉ là server-side template preset
+- Adobe Premiere MCP là UI automation fragile — không phải semantic
+- **Whip Script (video programming language)**: agent generate `.ws` code → runtime execute → video out. Không có competitor nào có layer này
 
 ---
 
-## Moat 4 — Creator Lock-in Thật Sự
+## Moat 4 — Creator Lock-in Thật Sự (Semantic Style Graph)
 
-### Vấn đề của lock-in hiện tại
+### Vấn đề với lock-in hiện tại
 
-Lock-in của Premiere/CapCut là **định dạng file** — `.prproj`, `.capcut` không import sang nhau được. Nhưng đây là lock-in yếu: creator export video là xong, không cần giữ project.
+Lock-in của Premiere/CapCut = định dạng file (`.prproj`, `.capcut`). Lock-in **yếu** vì creator export video là xong.
 
-### Cách Whip tạo lock-in khác
+### Whip: Data Moat Tích Lũy Theo Thời Gian
 
-Sau khi creator edit 50 dự án trên Whip, hệ thống học được:
-- **Nhịp cắt ưa thích** — hay cắt trên beat 1 hay beat 3?
-- **Caption style** — loud hay minimal? Font nào? Màu gì?
-- **Behavior pattern** — hay zoom vào lúc nhấn mạnh? Hay pan sang phải khi chuyển topic?
-- **Audio signature** — hay duck nhạc bao nhiêu dB khi nói?
+Sau mỗi project, Whip extract **Creator Style Graph** — fingerprint editing của creator:
 
-Tất cả được encode vào **Semantic Style Graph** riêng của creator.
+```
+Creator Style Graph (per creator, cross-project, stored serverside):
+  cut_rhythm: {
+    preferredCutOffset: -0.08s,    // hay cut 80ms trước beat, không phải đúng beat
+    silenceThreshold: 0.3s,        // cắt dead air > 300ms
+    paceTarget: 2.8,               // cuts/giây trung bình
+  }
+  motion_signature: {
+    zoomIntensity: 1.10,           // subtle zoom, không phải 1.2x
+    easeProfile: "expo_out_soft",  // không phải smoothPunch
+    driftAmplitude: 0.008,         // handheld drift nhẹ
+  }
+  caption_voice: {
+    stylePack: "loud",
+    pacingMode: "chunk",
+    fontWeight: 900,
+    energyThreshold: 0.72,         // từ nào highlight
+  }
+  energy_curve: {
+    buildDuration: 0.28,           // 28% đầu build up
+    peakPosition: 0.65,            // peak ở 65% video
+    releaseStyle: "gradual",
+  }
+  color_signature: {
+    liftB: -0.02, saturation: 0.85,
+    bloomThreshold: 0.75,
+  }
+```
 
-Khi họ muốn chuyển sang Premiere — họ mang file đi được, nhưng mang không được cái AI đã học về họ. Và cái AI đó ngày càng giỏi hơn khi có nhiều data hơn.
+**Cách hoạt động:**
+1. Creator edit project → engine observe decisions (vị trí cut, zoom amount, caption timing)
+2. Sau mỗi project: update Style Graph (Bayesian update, không overwrite)
+3. Project tiếp theo: `synthesize_behaviors()` nhận Style Graph như prior → output personalized
+4. Creator thấy: "Whip hiểu tôi muốn gì" → không cần re-configure mỗi lần
 
-### Tại sao đây là moat
+**Cách tạo lock-in:**
+- Creator chuyển sang Premiere: mang file được, mang không được AI đã học về họ
+- Style Graph ngày càng chính xác hơn → output ngày càng ít cần chỉnh → không muốn chuyển
+- **Network effect phụ**: Style Graph anonymous được aggregate → Whip học "style của creator trên 100k subscriber" → feed vào recipe marketplace
 
-- **Network effect** — càng dùng nhiều, AI càng hiểu creator hơn, càng không muốn chuyển
-- **Data moat** — Whip sẽ có dataset về editing pattern của hàng triệu creator — không ai có được nếu không build platform trước
+**Tại sao đây là moat:**
+- Data compound theo thời gian — không thể "clone" dù có code
+- Không ai có dataset editing pattern của hàng triệu creator nếu không build platform trước
+- Adobe/CapCut không có cross-project learning architecture
 
 ---
 
 ## Moat 5 — Thread Architecture & Zero Latency
 
-### Vấn đề performance hiện tại
+### Vấn đề performance của browser app
 
-Khi editor "treo" (lag/freeze), đó là vì **UI Thread bị block**. Mọi browser app đều có 1 main thread chạy UI. Nếu một tác vụ nặng (decode video, chạy AI, tính keyframe) chạy trên cùng thread đó → UI đơ.
+Browser có 1 Main Thread. Mọi JavaScript, UI, animation đều chạy trên đó. 1 tác vụ nặng → UI đơ.
 
-### Cách Whip làm
+Mọi web editor hiện tại bị bottleneck bởi design này: CapCut web lag khi cắt video dài, Descript đơ khi AI processing.
 
-**4 thread hoạt động độc lập** (tất cả trong trình duyệt, không cần server):
+### Whip: 5 Luồng Hoạt Động Độc Lập
 
 ```
-UI Thread        → chỉ vẽ giao diện, không bao giờ bị block
-Render Worker    → WebGPU render chạy hoàn toàn tách biệt
-State Worker     → quản lý data, event sourcing, tính toán graph
-AI Sync Worker   → gọi LLM API, xử lý response, không block gì cả
+UI Thread        → React render, input. Không bao giờ chạy code nặng.
+                   Chỉ nhận typed diffs từ State Worker.
+                   Mục tiêu: luôn ≥60fps, kể cả khi AI đang xử lý nền.
+
+State Worker     → OntologyGraph SQLite. Event sourcing. Single source of truth.
+                   Nhận mutations → compute → emit minimal diffs → UI Thread.
+                   Xử lý graph queries, resolve anchors, validate constraints.
+
+Render Worker    → WebGPU + OffscreenCanvas. GPUExternalTexture zero-copy.
+                   Nhận render commands, không nhận state.
+                   4K 60fps, CPU gần như idle.
+
+Ingestion Worker → Whisper ONNX + MediaPipe. Chạy 1 lần khi video added.
+                   Progressive emit: Word[] xong trước → UI update,
+                   VisualEvent[] xong sau → UI update thêm.
+                   Không block gì cả.
+
+AI Worker        → LLM synthesis on-demand, Style Graph update.
+                   Hoàn toàn async. Result cache vào OntologyGraph.
+                   Retry tự động nếu fail, không ảnh hưởng edit session.
+
+MCP SharedWorker → Agent interface. Chạy trong SharedWorker,
+                   tất cả tab Whip đều connect được cùng 1 session.
 ```
 
-**Web Worker** (giải thích): Trình duyệt cho phép chạy JavaScript song song trong "luồng nền" — giống multi-threading. Render Worker và State Worker là các Web Worker như vậy.
+**Kết quả thực tế:** Dù AI đang phân tích 30 phút video phía sau, user kéo keyframe vẫn 60fps mượt. Dù export đang chạy, timeline vẫn scrub instant. **Demo video là bằng chứng tốt nhất.**
 
-**Kết quả:** Dù AI đang phân tích 1000 frame phía sau, bạn kéo keyframe vẫn 60fps mượt. Dù file 50GB, timeline scrub vẫn instant.
-
-### Tại sao đây là moat
-
-- Cần expertise cao về browser internals — đội ngũ bình thường không làm được
-- Khi đã hoạt động tốt, đây là USP (unique selling point) mà demo video là bằng chứng tốt nhất để pitch
+**Tại sao đây là moat:**
+- Cần expertise sâu về browser internals, SharedWorker, OffscreenCanvas, WebGPU
+- Không thể outsource — mỗi phần phụ thuộc nhau, phải design đồng thời
+- Một khi chạy tốt, UX gap với đối thủ là không thể giải thích bằng lời — phải dùng mới thấy
 
 ---
 
-## Tổng kết: Unicorn Thesis
+## Tại Sao 5 Moat Khuếch Đại Lẫn Nhau
 
-**TAM** (Tổng thị trường — Total Addressable Market): Thị trường video editing software toàn cầu ~$1.1 tỷ USD (2024), dự báo ~$2.1 tỷ USD (2030). Thêm thị trường creator economy ~$250 tỷ USD (2025).
+```
+Moat 1 (Semantic Graph)
+    │ OntologyGraph là input cho agent
+    ▼
+Moat 3 (MCP Agent)
+    │ Agent observe editing decisions
+    ▼
+Moat 4 (Creator Lock-in)
+    │ Style Graph improve BehaviorNode generation
+    ▼
+Moat 1 (lại) → output tốt hơn → creator dùng nhiều hơn → loop
 
-**Tại sao Whip có thể là unicorn (định giá $1B+):**
+Moat 2 (Local WebGPU)
+    │ Ingestion Worker fill OntologyGraph
+    ▼
+Moat 1 → richer signals → better behaviors
 
-1. **Market timing đúng**: Creator economy bùng nổ, mọi brand đều cần video content, AI đủ trưởng thành để execute (không chỉ suggest)
-2. **Technical moat thật sự**: Không phải "feature hơn", mà là **kiến trúc khác** — khó copy hơn nhiều
-3. **Platform play**: Whip không chỉ là editor — là platform AI agent cho video. Bất kỳ ai muốn build AI video tool đều phải xây lại cái Whip đã có
-4. **Distribution**: Mọi video "Made with Whip" là quảng cáo tự nhiên — viral loop tự nhiên không tốn marketing
+Moat 5 (Thread Architecture)
+    │ Giữ 60fps khi Moat 2 đang ingest + Moat 3 đang synthesize
+    ▼
+UX tốt → creator dùng nhiều → Moat 4 tích lũy nhanh hơn
+```
 
-**Pitch một câu cho YC:** *"Chúng tôi đang xây dựng ngôn ngữ lập trình cho video — thay vì thao tác thời gian, creator thao tác ý nghĩa. Adobe cần 5 năm để rebuild. Chúng tôi đang làm ngay bây giờ."*
+**Pitch một câu cho YC:**
+*"Chúng tôi đang xây dựng ngôn ngữ lập trình cho video — thay vì thao tác thời gian, creator thao tác ý nghĩa. Adobe cần 5 năm để rebuild. Chúng tôi đang làm ngay bây giờ, và mỗi video được edit trên Whip làm cho Whip hiểu creator đó tốt hơn."*
+
+---
+
+## Unicorn Thesis — 3 Lớp Doanh Thu
+
+**TAM thật sự:** Video editing software ~$2.1B. Developer tools ~$50B. Digital advertising ~$600B.
+
+Whip không chỉ là editor — nó là infrastructure. 3 lớp:
+
+```
+L1: Editor ($30/tháng sub)
+    → Creators dùng Whip GUI
+    → TAM: $2.1B video software
+
+L2: Platform API ($0.10/min video processed)
+    → Developers build AI video tools trên Whip MCP + Whip Script runtime
+    → "Stripe cho video" — không ai phải tự build video engine
+    → TAM: $50B developer tools
+
+L3: Ad Synthesis Engine (revenue share + render credit)
+    → Creator Style Graph × Viewer Segment → N personalized ad variants
+    → "Một brief → 10,000 personalized clips, mỗi clip style của 1 creator"
+    → TAM: $600B digital ads
+```
+
+**Tại sao Whip có thể là $1B unicorn:**
+1. **Market timing đúng:** Creator economy × AI × WebGPU × agent-native tooling tất cả mature 2026
+2. **Technical moat thật sự:** Kiến trúc semantic graph — không phải feature hơn, kiến trúc khác — Adobe cần rebuild từ đầu
+3. **Data flywheel:** Mỗi project → Style Graph tốt hơn → output tốt hơn → retention cao → more data → loop — compound không thể clone
+4. **Whip Script:** "Video programming language" = developer platform play. Mọi AI agent muốn produce video gọi Whip runtime
+5. **Distribution:** "Made with Whip" watermark trên video viral → 0-cost acquisition. Creator recommend cho creator.
+6. **CapCut vulnerability:** ByteDance data sovereignty = Western market opening. Whip local-first = natural replacement

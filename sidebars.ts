@@ -49,9 +49,8 @@ const sidebars: SidebarsConfig = {
               label: "📍 Vision",
               collapsed: false,
               items: [
-                { type: "doc", id: "whip-overview", label: "🗺 Tổng quan" },
-                { type: "doc", id: "whip-moat",     label: "🏆 Tại sao Whip thắng" },
-                { type: "doc", id: "whip-mvp-scope",label: "✅ MVP & Roadmap" },
+                { type: "doc", id: "whip-overview",  label: "🗺 Tổng quan" },
+                { type: "doc", id: "whip-mvp-scope", label: "✅ MVP & Roadmap" },
               ],
             },
 
@@ -76,10 +75,11 @@ const sidebars: SidebarsConfig = {
               collapsed: false,
               items: [
                 { type: "doc", id: "whip-architecture", label: "🏗 Kiến trúc SOTA 2026" },
-                { type: "doc", id: "whip-data-model",   label: "🗄 Project Document & Schema" },
-                { type: "doc", id: "whip-properties",   label: "📐 Properties Reference" },
+                { type: "doc", id: "whip-data-model",   label: "📐 Data Model & OntologyGraph" },
+                { type: "doc", id: "whip-properties",   label: "📋 Properties Reference" },
                 { type: "doc", id: "whip-api",          label: "🔌 Command API" },
                 { type: "doc", id: "whip-mcp",          label: "🤖 MCP & Agent Skills" },
+                { type: "doc", id: "whip-language",     label: "🧬 Whip Script Language" },
               ],
             },
 
@@ -91,6 +91,7 @@ const sidebars: SidebarsConfig = {
               items: [
                 { type: "doc", id: "whip-auto-viral-pipeline", label: "🔥 AI Pipelines" },
                 { type: "doc", id: "whip-behaviors",           label: "🎚 Smart Animation" },
+                { type: "doc", id: "whip-moat",                label: "🏆 5 Moats (SOTA 2026)" },
               ],
             },
 
@@ -100,8 +101,10 @@ const sidebars: SidebarsConfig = {
               label: "🚀 Go To Market",
               collapsed: false,
               items: [
-                { type: "doc", id: "whip-pitch",        label: "💰 Funding & Legal" },
-                { type: "doc", id: "whip-gtm-launch",   label: "🚀 GTM & Launch" },
+                { type: "doc", id: "whip-pitch",        label: "🚀 YC Pitch — $1B Thesis" },
+                { type: "doc", id: "whip-competitor",   label: "🔍 Competitor Analysis" },
+                { type: "doc", id: "whip-future",       label: "🔭 Future Vision 2030–2035" },
+                { type: "doc", id: "whip-gtm-launch",   label: "📣 GTM & Launch" },
                 { type: "doc", id: "whip-launch-infra", label: "🏗️ Launch & Infra" },
                 { type: "doc", id: "whip-onboarding",   label: "🎓 Onboarding & Landing" },
               ],
