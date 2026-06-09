@@ -101,7 +101,6 @@ const sidebars: SidebarsConfig = {
               label: "🚀 Go To Market",
               collapsed: false,
               items: [
-                { type: "doc", id: "whip-marketing",   label: "📣 Tóm Tắt Marketing" },
                 { type: "doc", id: "whip-pitch",        label: "🚀 YC Pitch — $1B Thesis" },
                 { type: "doc", id: "whip-competitor",   label: "🔍 Competitor Analysis" },
                 { type: "doc", id: "whip-future",       label: "🔭 Future Vision 2030–2035" },
