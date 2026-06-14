@@ -339,3 +339,113 @@ Những tính năng dưới đây **từng đánh dấu v2/v3 nhưng cần kéo 
 - Semantic Anchor DAG (SmartLink đã cover 80% use case)
 - CRDT collaboration (single-user trước)
 - Nested composition (scene grouping đủ cho v1)
+
+---
+
+## Validation Milestones — Từ MVP Đến Unicorn
+
+> Không phải roadmap tính năng. Đây là **bằng chứng** cần show ở mỗi giai đoạn để justify valuation và raise tiếp.
+
+### Stage 0 — Launch Validation (hiện tại → 4 tuần)
+**Câu hỏi cần trả lời:** "Có ai sẵn sàng trả tiền không?"
+
+| Metric | Target | Tại sao con số này |
+|---|---|---|
+| Người trả tiền đầu tiên | 10 | Nhỏ đủ để đạt, đủ để prove willingness-to-pay |
+| Free → Pro CVR | ≥2% | Benchmark SaaS early stage |
+| NPS sau lần dùng đầu | ≥40 | "Disappointed nếu mất Whip?" — benchmark PMF |
+| Video exported (free tier) | 100/tuần | Activation = proof of value |
+
+**Tín hiệu thất bại sớm:** Dưới 5 người trả tiền sau 4 tuần + không ai hỏi về tính năng mới → positioning sai, không phải tính năng sai.
+
+---
+
+### Stage 1 — Product-Market Fit (tháng 1–3)
+**Câu hỏi cần trả lời:** "SmartLink + Whip It có phải killer combo không?"
+
+| Metric | Target | Benchmark |
+|---|---|---|
+| Weekly Active Creators | 100 | Descript had ~500 WAU at seed |
+| Week-4 retention | ≥60% | Dưới 40% = PMF chưa đạt |
+| Avg. videos exported/user/tuần | ≥2 | Frequency = habit |
+| Thời gian edit so với tool cũ | -60% (tự báo cáo) | Core value prop proof |
+| MRR | $3K–$5K | Proof of monetization |
+
+**Flywheel trigger point:** Khi có ≥50 user đã dùng ≥5 projects → Style Graph bắt đầu có đủ data để suggest behaviors đúng hơn lần đầu. Đây là thời điểm bật "Style Graph Active" feature cho beta group.
+
+---
+
+### Stage 2 — Seed Round Ready (tháng 3–6)
+**Câu hỏi cần trả lời:** "Có data flywheel thật không?"
+
+| Metric | Target |
+|---|---|
+| WAC | 500 |
+| MRR | $15K–$25K |
+| Week-8 retention | ≥50% |
+| Style Graph accuracy (user survey) | "Whip hiểu phong cách của tôi" ≥70% agree sau 10 projects |
+| "Made with Whip" videos ngoài thị trường | 1,000+ (organic) |
+| L2 API waitlist | 50+ developers |
+
+**Story cho investor:** "Data flywheel đang quay — creator edit càng nhiều, output càng ít cần chỉnh. 70% user báo cáo project thứ 10 nhanh hơn 40% so với project đầu."
+
+---
+
+### Stage 3 — Series A Trigger (tháng 6–12)
+**Câu hỏi cần trả lời:** "Có platform play thật không, hay chỉ là editor tốt?"
+
+| Metric | Target |
+|---|---|
+| WAC | 5,000 |
+| MRR | $100K |
+| L2 API (beta) | 10 developer apps đang build trên Whip Script runtime |
+| Creator Style Graph | avg. 15+ projects/user (flywheel đang quay thật) |
+| Enterprise inquiry | ≥3 (legal, medical, education — privacy moat) |
+| CapCut migrators | track "came from CapCut" cohort — target 30%+ of new signups |
+
+**Story cho Series A:** "Whip không chỉ là editor. Mười developers đang build AI video tools trên Whip Script runtime — chúng tôi trở thành infrastructure. L3 ad synthesis pilot đang chạy với 2 brand."
+
+---
+
+### Stage 4 — Unicorn Path (năm 2–3)
+**Câu hỏi cần trả lời:** "L3 có phải business $1B không?"
+
+| Metric | Target |
+|---|---|
+| MAU | 100K+ creators |
+| ARR | $5M+ (L1) + $2M+ (L2) |
+| L3 pilot | 5 brand campaigns, each $50K+ |
+| Creator Style Graph dataset | 1M+ profiles (aggregate, anonymized) |
+| Whip Script ecosystem | 100+ tools built on runtime |
+
+**L3 thesis proof:** "Một brief tạo 10,000 personalized clips theo style của 1,000 creators khác nhau. CTR tăng 3.2× so với generic ad. Brand X tái ký hợp đồng."
+
+**Nếu L3 không cất cánh:** L1+L2 vẫn là sustainable $50M ARR business — không cần L3 để có exit tốt. L3 là upside, không phải điều kiện sống còn.
+
+---
+
+## Graduation Path — User Journey Theo Giai Đoạn
+
+```
+Creator discover Whip (watermark viral / Product Hunt / Reddit)
+    │
+    ▼
+Free tier: import video → SmartLink caption → export với watermark
+    │  "caption không bị lệch khi cắt" → aha moment
+    ▼
+Hit paywall khi dùng preset 👑 → upgrade $59 lifetime
+    │
+    ▼
+5–10 projects → Style Graph đủ data → "Whip It" suggest đúng ý
+    │  "nó biết tôi muốn gì" → không muốn chuyển tool
+    ▼
+Developer/agency discover creator dùng Whip → muốn automate
+    │
+    ▼
+L2 API: Whip Script runtime + MCP → build workflow tự động
+    │
+    ▼
+Brand thấy Whip Script + Style Graph → L3 ad synthesis pilot
+```
+
+**Mỗi bước có trigger rõ ràng.** Không có bước nào phụ thuộc vào hy vọng — có thể measure và optimize.

@@ -155,6 +155,23 @@ Agent traverse graph này để ra quyết định editorial — không cần RA
 
 ## 3. Thread Architecture — UI Không Bao Giờ Bị Treo
 
+> **Implement 13/06/2026 — chống crash thật (Moat #5 = no-crash, đã trả giá nhiều lần):**
+> - **Whisper = WASM, KHÔNG WebGPU** (research SOTA + transformers.js #860: WebGPU Whisper leak tensor →
+>   GPU mất device → crash). WASM on-device giữ Moat #2; whisper-tiny + audio cap 150s → vài giây.
+> - **GPU contention — SUSPEND không chỉ pause:** Whip It transcribe → `compositor.suspend()` RELEASE mọi
+>   video decoder + texture GPU (không chỉ pause render loop — texture 4K vẫn nằm GPU mem là đủ gây crash khi
+>   WASM/audio spike). Resume = setProject lại khi `whipBusy` false. Timeline (DOM) vẫn hiện cut.
+> - **ErrorBoundary** (main.tsx): uncaught render error (PixiJS throw khi webgl-lost) → banner "Try again"
+>   (soft recover, KHÔNG mất project) thay vì trắng/reload app. Beacon `react.error` để soi.
+> - **Video memory (compositor):** `preload="metadata"` (KHÔNG "auto" — auto nuốt cả file 4K vào RAM → OOM).
+>   LRU evict: tối đa `MAX_VIDEOS=8` decoder sống cùng lúc; video URL đổi (proxy thay gốc) → unload+rebuild.
+> - **Decode gate concurrency=1** cho probe/poster/proxy (native decode mem không hiện JS heap → guard mù).
+> - **Scrub:** `fastSeek` (keyframe-nearest) thay `currentTime` exact → mượt với 4K.
+> - **Memory guard** (`observe.ts`): JS heap >2.2GB → auto pause queue nền. Crash-capture (window.error/webgl.lost/
+>   pagehide → beacon `/__plog`) để soi crash sống qua reload. Self-test: `npm run stress` (Playwright, 23GB no-crash).
+> - Bên dưới là KIẾN TRÚC ĐÍCH (SQLite State Worker, OffscreenCanvas Render Worker) — chưa chuyển hết sang worker.
+
+
 ```
 UI Thread        → React render, input. KHÔNG chạy code nặng. Luôn ≥60fps.
                    Nhận diffs từ State Worker, không nhận toàn bộ state.
@@ -225,23 +242,28 @@ Whip V1 approach: Claude Haiku nhận **text summary** của signals → semanti
 
 ---
 
-## 5. OPFS + File System Access — Xử Lý File 50GB
+## 5. Storage — Reference + Proxy + Stream (implement 06/2026)
+
+> **Bài học đã trả giá:** copy bản gốc 20GB VÀO OPFS = nhân đôi đĩa + decode 95 video cùng lúc → **crash thật**.
+> OPFS không phải "chân ái" cho mọi thứ. Mỗi tầng 1 nhiệm vụ (SOTA-2026, Chromium):
 
 ```
-File gốc (SSD, không load vào RAM)
-    │ byte-range read (chỉ đọc frame cần render)
-    ▼
-WebCodecs decode (hardware) → VideoFrame
-    │ GPUExternalTexture (zero-copy)
-    ▼
-GPU → Render → Canvas
-
-Song song (background):
-    → tạo proxy 720p → OPFS (nhanh, nhẹ, cho edit preview)
-    → Khi export: đọc lại file gốc để render chất lượng cao
+BẢN GỐC (chục GB)  → File System Access handle (IndexedDB), 0 copy, để yên trên đĩa
+   │ <video src=blobURL> stream byte-range — KHÔNG full-load (RAM tab ~2–4GB)
+   ▼
+Preview/edit  → PROXY 540p (OPFS, nhẹ, scrub mượt)        ← đụng liên tục
+Export        → re-point compositor về GỐC 4K (full-res)   ← đụng hiếm
 ```
 
-Tab browser giới hạn RAM ~2-4GB. File 50GB → crash với mọi editor khác. Whip không bao giờ load toàn file vào RAM.
+**File-by-file (mỗi thứ làm gì):**
+- `assetHandles.ts` — lưu `FileSystemFileHandle` của bản gốc vào IndexedDB. Reload → `queryPermission`/`requestPermission` (gesture) re-link. `getAssetUrl` ưu tiên handle → fallback OPFS.
+- `proxyTranscode.ts` — `<video>` decode (native) → canvas 540p → `VideoEncoder` H.264 → `mp4-muxer`. Video-only (audio từ gốc). Lazy: chỉ transcode clip lên timeline/preview.
+- `assetStore.ts` — OPFS chỉ giữ DERIVED: `proxy-<id>`, poster. Không chứa gốc to.
+- `pipelineLog.ts` + `observe.ts` — JSON log (sống qua crash, beacon `/__plog`) + **memory guard**: RAM >2.2GB → tự pause queue nền (back-off, Moat #5). Poster/proxy serialize 1/lần → không OOM khi import folder lớn.
+
+**Import:** `showDirectoryPicker`/`showOpenFilePicker` → handle (Chromium). Safari/FF cũ → fallback input + OPFS copy.
+
+Tab browser giới hạn RAM ~2-4GB. File 50GB → crash mọi editor khác. Whip không full-load vào RAM, không copy gốc, edit trên proxy.
 
 ---
 
@@ -275,12 +297,15 @@ Orchestrator Agent
 
 ## 7. Storage — Phân Tầng
 
+> Hiện tại (06/2026): gốc = File System Access handle (§5); OPFS giữ `proxy-<id>` 540p + poster;
+> graph trong `project.whip` JSON; undo = in-memory stack. Dòng dưới là ĐÍCH (SQLite/events.log chưa làm).
+
 ```
 Local (realtime):
-  OPFS/nodes/        ← mỗi OntologyGraph object = 1 file (concurrent write safe)
-  OPFS/events.log    ← append-only (infinite undo/redo)
-  SQLite (wa-sqlite) ← semantic index, query nhanh, pgvector cho Moat 4
-  OPFS/proxy/        ← video proxy 720p
+  OPFS/nodes/        ← (đích) mỗi OntologyGraph object = 1 file (concurrent write safe)
+  OPFS/events.log    ← (đích) append-only (infinite undo/redo)
+  SQLite (wa-sqlite) ← (đích) semantic index, query nhanh, pgvector cho Moat 4
+  OPFS/proxy-<id>    ← video proxy 540p (ĐÃ CÓ)
 
 Server (on-demand):
   PostgreSQL         ← event log backup, project metadata

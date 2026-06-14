@@ -371,6 +371,51 @@ Những gì đang được fund:
 
 ---
 
+## Đối Thủ Mới Nổi Q1–Q2 2026
+
+> Landscape thay đổi nhanh. Update này capture những player mới xuất hiện sau docs gốc.
+
+### Captions.ai (Series B — $80M)
+**Đã mở rộng từ caption sang:** AI avatar, lip sync, dubbing 28+ ngôn ngữ, eye contact correction, background swap.
+
+**Threat level:** Trung bình. Họ đang crawl sang territory của Whip (talking-head AI edit).
+
+**Weakness:** Vẫn cloud-upload. Không semantic graph. Không timeline editor. Output = processed clip, không phải editable project.
+
+**Whip response:** Caption là feature, không phải moat. SmartLink (caption bám audio khi cắt) là differentiator thật — Captions.ai không có kiến trúc để làm điều này.
+
+---
+
+### Pika Labs 2.0 (video gen + edit)
+**Update 2026:** Pika bổ sung "Modify" feature — edit footage có sẵn qua text prompt. Không có timeline, không có semantic anchoring.
+
+**Threat level:** Thấp. Use case khác (change visual appearance of footage vs edit narrative structure).
+
+---
+
+### Higgsfield AI
+**Là gì:** AI video generation focused on human motion consistency. Tốt cho social content.
+
+**Threat level:** Thấp. Pure generation, không edit. Potential supplier (`generate_asset()` call).
+
+---
+
+### ElevenLabs Video (nếu ship)
+**Rumored:** ElevenLabs đang build video editor tích hợp voice cloning + audio. Audio-first approach.
+
+**Threat level:** Trung bình nếu ship. Audio moat của họ (voice cloning quality) là genuine. Nhưng visual semantic = 0.
+
+**Whip advantage:** Audio understanding trong Whip (Whisper ONNX + acoustic signals) + visual understanding là cross-modal. ElevenLabs sẽ là audio-only tool, không thể match SmartLink (anchor vào phoneme, không chỉ timecode).
+
+---
+
+### Manus / agentic AI tools với video output
+**Pattern mới 2026:** Agentic AI (Manus, similar) có thể "produce video" bằng cách gọi chuỗi tool — screenshot → ffmpeg → etc. Primitive, không semantic.
+
+**Threat level:** Thấp ngắn hạn. Đây là Whip opportunity — khi Whip Script runtime live, Manus-class agent **sẽ gọi Whip** thay vì tự build video pipeline. **Đây là L2 platform thesis.**
+
+---
+
 ## Open Source — Không Có Đối Thủ
 
 | Tool | Là gì | AI | Web-native? |

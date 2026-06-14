@@ -39,6 +39,19 @@ const sidebars: SidebarsConfig = {
         },
         {
           type: "category",
+          label: "🧵 Seam",
+          collapsed: false,
+          items: [
+            { type: "doc", id: "seam-overview",     label: "🗺 Tổng quan" },
+            { type: "doc", id: "seam-architecture", label: "🏗 Kiến trúc SOTA 2026" },
+            { type: "doc", id: "seam-moat",         label: "🏆 5 Moats" },
+            { type: "doc", id: "seam-competitor",   label: "🔍 Đối thủ" },
+            { type: "doc", id: "seam-mvp-scope",    label: "✅ MVP & Validation" },
+            { type: "doc", id: "seam-pitch",        label: "🚀 YC Pitch — $1B Thesis" },
+          ],
+        },
+        {
+          type: "category",
           label: "✂️ Whip",
           collapsed: false,
           items: [
@@ -105,6 +118,8 @@ const sidebars: SidebarsConfig = {
                 { type: "doc", id: "whip-competitor",   label: "🔍 Competitor Analysis" },
                 { type: "doc", id: "whip-future",       label: "🔭 Future Vision 2030–2035" },
                 { type: "doc", id: "whip-gtm-launch",   label: "📣 GTM & Launch" },
+                { type: "doc", id: "whip-marketing-roadmap", label: "📣 Marketing Roadmap (team MAR)" },
+                { type: "doc", id: "whip-branding",      label: "📣 Branding (Brand Kit)" },
                 { type: "doc", id: "whip-launch-infra", label: "🏗️ Launch & Infra" },
                 { type: "doc", id: "whip-onboarding",   label: "🎓 Onboarding & Landing" },
               ],

@@ -101,12 +101,25 @@ File SSD → WebCodecs (hardware decode) → VideoFrame
 CPU gần như idle trong render. WebGPU compute: ~1ms/frame desktop (vs 10–20ms JS pixel loop).
 Benchmark: web.dev AI Video Upscaler case study — 250k MAU, 10,000 videos/ngày, $0 server cost.
 
-**OPFS — file 50GB không crash:**
+**Storage tiered — file chục GB không crash (implement 06/2026, đã sửa từ "OPFS là tất cả"):**
+
+> ⚠️ OPFS KHÔNG phải "chân ái" cho mọi thứ. Copy bản gốc 20GB VÀO OPFS = nhân đôi đĩa + crash
+> (đã đụng thật). Mỗi tầng lưu trữ làm 1 nhiệm vụ:
+
+| Tầng | Giữ gì | Vì sao |
+|---|---|---|
+| **File System Access handle** (IndexedDB) | **bản GỐC** (chục GB) | trỏ file trên đĩa, **0 copy**. `<video src=blobURL>` stream byte-range → không full-load RAM (~2–4GB limit). Reload xin lại quyền 1 click. |
+| **OPFS** | **derived nhỏ-mà-nóng**: proxy 540p, poster, graph, transcript | nhanh nhất browser (sync access handle), đọc liên tục lúc edit. KHÔNG để bản gốc to ở đây. |
+| **RAM** | chỉ frame đang decode + UI state | encoder/poster serialize 1/lần + memory guard auto-pause khi >2.2GB |
+
 ```
-Không load file vào RAM. Byte-range read từ SSD đúng frame cần thiết.
-Tab browser limit ~2–4GB RAM. File 50GB → crash mọi editor khác. Whip không bao giờ full-load.
-Background: tạo proxy 720p → edit preview nhanh. Export: đọc lại gốc 4K.
+Edit:   preview chạy PROXY 540p (mượt). Original chỉ stream khi cần.
+Export: re-point compositor về GỐC 4K (full-res). Proxy chỉ lo preview.
+Observe: pipelineLog (JSON, sống qua crash) + observe-state + memory guard (Moat #5).
 ```
+
+Files: `assetHandles.ts` (handle store), `proxyTranscode.ts` (WebCodecs 540p), `assetStore.ts` (OPFS proxy/poster),
+`observe.ts` + `pipelineLog.ts` (memory guard + log). Chi tiết: `whip-architecture.md` §Storage.
 
 **Chi phí AI thực tế:**
 - MediaPipe (gesture/expression/pose): **$0**, WebGL2 local
@@ -182,6 +195,18 @@ Orchestrator Agent
 ---
 
 ## Moat 4 — Creator Lock-in Thật Sự (Semantic Style Graph)
+
+> **Trạng thái implement 13/06/2026:** Đã có **thư viện WhipStyle + recommendation** (bước 1 của moat).
+> Creator Style Graph học-theo-thời-gian (Bayesian, bên dưới) là ĐÍCH, chưa làm.
+>
+> **ĐÃ CÓ (`src/engine/whipStyles.ts`):** 6 WhipStyle = recipe đầy đủ (caption font/màu/pacing/highlight +
+> look + cutTightness + brollDensity + punchZoom). `recommendStyles(footageSummary)` rank theo input type
+> (talking-head/montage/...). Whip It phân tích input → auto-apply style hợp nhất; user đổi qua `StylePicker`.
+> Caption có 5 highlight mode (color/box/underline/scale/bounce) render trong compositor.
+>
+> **CHƯA (research-grade):** phân tích VISION từ video mẫu (OCR caption sample + scene-cut detection +
+> font-match) để replicate "y chang" 1 reference reel. Hiện recommend theo input type, không clone từ sample.
+> Style Graph học per-creator Bayesian cũng chưa làm.
 
 ### Vấn đề với lock-in hiện tại
 
@@ -342,3 +367,119 @@ L3: Ad Synthesis Engine (revenue share + render credit)
 4. **Whip Script:** "Video programming language" = developer platform play. Mọi AI agent muốn produce video gọi Whip runtime
 5. **Distribution:** "Made with Whip" watermark trên video viral → 0-cost acquisition. Creator recommend cho creator.
 6. **CapCut vulnerability:** ByteDance data sovereignty = Western market opening. Whip local-first = natural replacement
+
+---
+
+## SOTA 2026 — Model Stack Cập Nhật
+
+> Docs gốc reference một số model đã thay đổi. Update này giữ đúng stack thực tế Q2/2026.
+
+### Transcription (Ingestion Worker)
+| Model | Cách dùng | Status |
+|---|---|---|
+| **Whisper ONNX (WASM+SIMD)** | Primary — local, $0, ~5.9s/60s audio | ✅ Production |
+| **Deepgram Nova-3** | Fallback cloud — nếu user cần tốc độ real-time hoặc accent khó | $0.004/phút |
+| **Parakeet-TDT 0.6B** (NVIDIA ONNX) | Thử nghiệm — 97% accuracy, 1 giây cho 60 giây audio | 🔄 Eval v2 |
+
+**Quyết định kiến trúc:** WASM+SIMD vẫn beats WebGPU cho Whisper autoregressive loop. Không thay đổi.
+
+### Visual Understanding (Ingestion Worker)
+| Signal | Model | Status |
+|---|---|---|
+| Face / expression / gaze | **MediaPipe FaceLandmarker v2** (WebGL2) | ✅ Production |
+| Gesture / pose | **MediaPipe GestureRecognizer + PoseLandmarker** | ✅ Production |
+| Object segmentation | **SAM2 ONNX** (WebGPU compute) — thay thế Roto Brush approach | 🔄 P1 target |
+| Background removal | **RMBG-2.0** (WebGPU, local) — không upload | 🔄 P1 target |
+| Scene/content understanding | **Florence-2 ONNX** (WASM) — caption + grounding, chạy local | 🔄 V2 |
+
+**Note:** TwelveLabs đã deprecated trong stack — replaced bởi frame sampling + Florence-2/Gemini (xem `whip-mvp-scope.md`).
+
+### LLM Synthesis (AI Worker)
+| Task | Model | Lý do |
+|---|---|---|
+| Behavior synthesis (`synthesize_behaviors`) | **Claude Haiku 4.5** | $0.001/phút, context window đủ cho OntologyGraph slice |
+| Editorial intent ("Whip It" Art Director) | **Claude Sonnet 4.6** | Reasoning tốt hơn cho CompositionBrief generation |
+| Whip Script generation | **Claude Sonnet 4.6** | Code gen quality cần Sonnet |
+| Visual layout + style decision | **Gemini 2.5 Flash** | Multimodal — nhận frame samples, quyết định visual composition |
+
+**Pattern chuẩn:** Orchestrator (Sonnet) → phân việc cho Analyzer (Haiku), Editor (Sonnet), Validator (Haiku). Không dùng RAG — OntologyGraph là structured data, agent query trực tiếp.
+
+### Image Generation (Asset Layer)
+| Use case | Model | Lý do |
+|---|---|---|
+| Background / scene asset | **FLUX.1 Kontext** (API) | Edit-aware generation — nhất quán với existing visual context |
+| Character / product cutout | **Seedream 3.0** (API) hoặc **Ideogram v3** | Quality + RMBG-ready |
+| Vector graphic / icon | **Recraft v3** (API) | SVG output — scale không vỡ |
+
+### Video Generation (generate_asset())
+| Use case | Model |
+|---|---|
+| B-roll generation | **Kling 2.0 API** hoặc **Wan 2.1** |
+| Avatar / talking head | **HeyGen API** (nếu cần lip sync) |
+| Live action extend | **Runway Gen-4 API** |
+
+**Kiến trúc:** Whip không cạnh tranh với generation model — gọi họ như supplier. `generate_asset(prompt, style_context)` → trả về asset ID → import vào OntologyGraph.
+
+---
+
+## Counter-Thesis — Nếu Đối Thủ Làm Được X
+
+> Phần này bắt buộc phải có. Không phân tích counter-thesis = không hiểu moat của mình.
+
+### Scenario 1: CapCut build semantic anchoring trong 12 tháng
+**Xác suất:** Thấp-trung. ByteDance có engineer, nhưng incentive structure khác.
+
+**Phân tích:** CapCut target 700M casual user. Semantic graph phục vụ creator chuyên nghiệp — segment nhỏ hơn, ARPU cao hơn. ByteDance ưu tiên mass feature (video gen, avatar, filter) hơn architectural depth.
+
+**Nhưng nếu họ làm:** Whip vẫn thắng bởi (1) Style Graph đã tích lũy qua số lượng projects, (2) Privacy moat không fixable dù CapCut có semantic graph — data vẫn lên server Trung Quốc, (3) MCP + Whip Script ecosystem đã có switching cost.
+
+**Response nếu xảy ra:** Đẩy nhanh L2 API — khi developer ecosystem đã hình thành, CapCut GUI improvement không ảnh hưởng Whip platform.
+
+---
+
+### Scenario 2: Adobe mua VideoEdit MCP hoặc startup tương tự + tích hợp semantic layer
+**Xác suất:** Trung bình. Adobe có pattern mua acquisition (Figma failed, Frame.io thành công).
+
+**Phân tích:** Ngay cả khi Adobe mua, tích hợp vào C++ monolith mất 2-3 năm. Adobe có pattern: mua → bury → legacy. Premiere CC vẫn là 30 năm codebase.
+
+**Response:** Creator market không chờ Adobe. Whip cần 100K creator trước khi Adobe có thể tích hợp acquisition.
+
+---
+
+### Scenario 3: Apple Final Cut Pro ra browser version + on-device AI (Neural Engine)
+**Xác suất:** Thấp. Apple không có history làm web app cho pro tools.
+
+**Phân tích:** Neural Engine của Apple có thể chạy Whisper + MediaPipe nhanh hơn WASM. Nhưng Final Cut = Mac/iPad only, không cross-platform.
+
+**Response:** Whip cross-platform (Windows Chrome, Android Chrome) là lợi thế mà Apple không thể match.
+
+---
+
+### Scenario 4: Open-source project build semantic video editor (Hugging Face / community)
+**Xác suất:** Trung bình dài hạn (3-5 năm).
+
+**Phân tích:** Open-source có thể replicate Moat 1, 2, 5. Không thể replicate Moat 4 (Style Graph data per-creator) vì data cần người dùng thật sử dụng.
+
+**Response:** Tốc độ và Style Graph data flywheel là khoảng cách không thể bắt kịp bằng code. OSS build được engine, không build được dataset 1M creator profiles.
+
+---
+
+## Mobile & Safari — Gap Cần Thừa Nhận
+
+**Hiện trạng (Q2/2026):**
+- Chrome desktop (Windows/Mac/Linux): WebGPU ✅ GA
+- Safari macOS 17+: WebGPU ✅ (tháng 11/2025, limited support)
+- Firefox: WebGPU ✅ (tháng 11/2025)
+- **Chrome Android:** WebGPU ⚠️ experimental, không stable
+- **Safari iOS:** WebGPU ❌ không có (WKWebView limitation)
+- **CapCut mobile app:** Native, không bị giới hạn browser
+
+**Impact thực tế:** Creator TikTok edit trên điện thoại là segment Whip chưa đánh được ở v1. Đây là gap thật.
+
+**Mitigation strategy:**
+1. **V1 target: Desktop creator** — podcast editor, course creator, coach. Họ dùng laptop/desktop, Chrome/Edge. WebGPU không phải issue.
+2. **WASM fallback cho mobile:** Ingestion Worker có thể dùng WASM+SIMD thay WebGPU cho MediaPipe — chậm hơn ~3×, nhưng chạy được trên mobile Chrome. Render Worker fallback sang PixiJS/WebGL2 (đã có).
+3. **V2 mobile:** Khi Chrome Android WebGPU stable (estimate Q4/2026), Whip mobile tự nhiên.
+4. **iOS:** PWA với WebGL2 fallback. Không cần App Store. Core feature (caption + SmartLink + behaviors) chạy được trên WebGL2.
+
+**Positioning:** Whip v1 là desktop-first, không mobile-first. Đây là honest positioning, không phải limitation — desktop creator là segment trả tiền nhiều hơn (professional workflow).

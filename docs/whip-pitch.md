@@ -204,3 +204,44 @@ YC cược vào team × timing × market.
 - **Pre-YC funding:** Angel round $200–500K trên demo + early traction để có 12 tháng runway
 
 **Track song song:** VC Đông Nam Á focus creator (500 Global, Jungle Ventures, East Ventures) như warm-up + signal distribution advantage cho YC.
+
+---
+
+## Risk Register — Honest
+
+> YC sẽ hỏi. Trả lời trước khi bị hỏi là dấu hiệu của founder hiểu sản phẩm của mình.
+
+| Risk | Xác suất | Impact | Mitigation |
+|---|---|---|---|
+| **"Whip It" không đủ tốt để giữ user trả tiền** | Cao | Critical | v1 target là "tốt hơn làm tay 4 tiếng", không phải "perfect". Iterate dựa trên feedback. Style Graph compound theo thời gian. |
+| **CapCut clone SmartLink trong 6–9 tháng** | Trung bình | Cao | SmartLink là symptom, không phải moat. Moat thật là OntologyGraph architecture. CapCut cần rebuild data model, không chỉ add feature. |
+| **WebGPU không stable đủ trên Safari** | Cao (iOS) | Trung bình | V1 target desktop creators — họ không dùng Safari iOS để edit. WASM fallback cho WebGL2. iOS V2. |
+| **Creator không hiểu "semantic anchoring" là gì** | Cao | Thấp | Marketing không cần giải thích semantic. Marketing nói: "Cắt video, caption không bị lệch — ever." Demo > explanation. |
+| **Data flywheel không quay vì không đủ user** | Trung bình | Cao | Flywheel bắt đầu ở 50 user × 5 projects = 250 data points. Đủ để Style Graph có signal. Threshold thấp hơn tưởng. |
+| **Solo founder: burn out hoặc không đủ bandwidth** | Cao | Critical | Ưu tiên P0 → launch → revenue → hire. Không build tất cả trước khi launch. Whip Script + MCP có thể dùng Claude agent để test / generate fixtures. |
+| **L3 Ad Synthesis không được brand adopt** | Trung bình | Thấp (L1+L2 đủ sống) | L3 là moonshot. L1+L2 là sustainable business. L3 failure ≠ company failure. |
+| **Funding cạn trước traction** | Thấp (burn rate $10/tháng) | Critical | Burn rate MVP gần $0 là lợi thế cực lớn. 18+ tháng runway với $0 seed nếu có income nhỏ. |
+
+---
+
+## Tại Sao Segment Talking-Head Trước
+
+> Đây là quyết định chiến lược quan trọng nhất cho v1 — cần explicit trong pitch.
+
+Whip có thể target 3 segment: (1) creator TikTok/Reels, (2) motion designer thay AE, (3) developer/AI builder.
+
+**V1 chọn creator talking-head (podcast, course, coach, founder update) vì:**
+
+1. **Pain thật nhất, tiền nhiều nhất:** Creator talking-head làm video hàng tuần, đã trả $30–150/tháng cho Descript/CapCut/Premier. Không cần thuyết phục về pain.
+
+2. **SmartLink là killer feature ngay hôm nay:** Caption bám audio khi cắt = aha moment ngay lần đầu dùng. Không cần "Whip It" pipeline live để prove value.
+
+3. **Style Graph accumulate nhanh nhất:** Creator làm 4+ video/tháng → Style Graph đủ data trong 2 tháng. Motion designer làm 1 project/tuần, developer ít hơn.
+
+4. **Distribution tự nhiên:** Mỗi talking-head video export = watermark visible = loop viral trong chính segment đó.
+
+5. **CapCut vulnerability đang maximize:** Influencer Mỹ đang rời CapCut vì ByteDance concerns. Whip local-first là replacement tự nhiên.
+
+**Không đánh AE user ngay v1** vì: họ cần graph editor, blend modes, nested comp — tất cả chưa live. Sẽ disappoint. Đánh sau khi v1 feature set complete.
+
+**Developer platform (L2)** không cần marketing riêng v1 — sẽ tự nhiên xuất hiện khi creator ecosystem đủ lớn và Whip Script runtime live.
