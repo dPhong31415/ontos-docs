@@ -63,15 +63,17 @@ User cut tại Word[w_042]
 
 ---
 
-## Moat 2 — Local-First + Browser-Native Compute (Video không rời máy)
+## Moat 2 — Browser-Native AI Pipeline (Zero-Upload, ~$0 Inference)
+
+> **Note (14/06/2026):** "Local-first" như một positioning marketing bị drop — quá hẹp và dễ bị hiểu nhầm. Moat thật là **technical pipeline** (WebGPU + WebCodecs + WASM SIMD): inference chạy trong browser, không cần upload, chi phí ~$0. Đây là moat kỹ thuật, không phải privacy claim.
 
 ### Vấn đề hiện tại
 
 - Premiere/DaVinci: cài 10-30GB, cần GPU mạnh, không web
-- CapCut web: dùng WebAssembly + WebCodecs cho rendering (solid) nhưng AI features là **server-side ByteDance infrastructure** — data sovereignty concern, U.S. operations đang bị scrutiny
-- Descript: audio-centric, Whisper qua OpenAI API (cloud), Temporal.io backend cho AI jobs
-- **Mọi web editor**: AI analysis = gửi video lên cloud → latency cao, tốn tiền, data leak
-- TwelveLabs: video understanding API tốt nhất hiện tại, nhưng video phải upload → $12/30 phút
+- CapCut web: WebCodecs/WASM rendering tốt, nhưng AI features là **server-side ByteDance** — latency cao, $5+/session cost
+- Descript: Whisper qua OpenAI API (cloud), Temporal.io backend → latency + cost
+- **Mọi web editor**: AI analysis = upload video lên cloud → chờ, tốn tiền, phụ thuộc internet
+- TwelveLabs: video understanding tốt nhất, nhưng upload required → $12/30 phút
 
 ### Whip: Zero-Upload AI + Dense Local Signals
 
@@ -132,8 +134,8 @@ Files: `assetHandles.ts` (handle store), `proxyTranscode.ts` (WebCodecs 540p), `
 **Tại sao đây là moat:**
 - WebCodecs + GPUExternalTexture + OPFS pipeline cần expertise browser internals sâu — không copy được
 - MediaPipe WebGL2 ingestion-time (toàn bộ video, dense signals) chưa có editor nào làm được
-- Privacy moat: video không rời máy → unbeatable cho enterprise, legal, medical content
-- CapCut có WebAssembly pipeline tương tự cho rendering, nhưng AI vẫn server-side ByteDance — trust issue chết người ở Western market
+- Zero upload = zero latency wait + $0 server cost → margin cao hơn mọi cloud competitor
+- CapCut có WebAssembly pipeline cho rendering, nhưng AI vẫn server-side → Whip ~$0.03/30 min vs CapCut $5+
 
 ---
 
@@ -366,7 +368,7 @@ L3: Ad Synthesis Engine (revenue share + render credit)
 3. **Data flywheel:** Mỗi project → Style Graph tốt hơn → output tốt hơn → retention cao → more data → loop — compound không thể clone
 4. **Whip Script:** "Video programming language" = developer platform play. Mọi AI agent muốn produce video gọi Whip runtime
 5. **Distribution:** "Made with Whip" watermark trên video viral → 0-cost acquisition. Creator recommend cho creator.
-6. **CapCut vulnerability:** ByteDance data sovereignty = Western market opening. Whip local-first = natural replacement
+6. **CapCut vulnerability:** ByteDance data sovereignty = Western market opening. Whip browser-native zero-upload = natural replacement
 
 ---
 
