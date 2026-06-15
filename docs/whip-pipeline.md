@@ -65,15 +65,19 @@ Sau gán: quét vault tìm footage OK hơn (swap). Lớp verify độc lập (`v
 
 ---
 
-## Bench khả thi browser (đo thật — cập nhật khi chạy e2e)
-| Bước | Engine | Thời gian (clip ~60s) | Khả thi browser | Ghi chú |
+## Bench khả thi browser (ĐO THẬT 16/06 — e2e-bench.ts + e2e-scenecut.mjs)
+| Bước | Engine | Thời gian | Khả thi browser | Ghi chú |
 |---|---|---|---|---|
-| Scene-cut classical | sceneCutSeek | _đo e2e_ | ✅ | rVFC playback |
-| Scene-cut TransNetV2 | transnet playback | _đo e2e_ | ⚠️ | bound theo clip; seek-per-frame KO khả thi (>2min/45s) |
-| Semantic scene (Frame-VLM) | sceneVlm ARK | _đo e2e_ | ✅ cloud rẻ | ≈90% TwelveLabs |
-| Match + swap | entityHit+assign | <0.1s | ✅ pure | — |
-| Voice | ElevenLabs | _đo_ | ✅ cloud | — |
-| Graphic gen | BytePlus+VTracer | _đo_ | ✅ (VTracer WASM) | — |
+| Scene-cut seek-per-frame | (cũ) | **>2min/45s clip** ❌ | KO | đo headless — đã bỏ |
+| Scene-cut TransNetV2 playback | transnet rVFC | ~dur/2 (bound theo clip) | ✅ cần browser (rVFC) | bound source-range, ko phát cả asset |
+| Scene-cut classical | sceneCutSeek | _phụ thuộc seek_ | ✅ | fallback |
+| LLM match-scenes (8×8) | api/match-scenes | **~5s** (đo live) | ✅ cloud | Claude matrix |
+| entity-hit + assign + swap | entityHit/matchAssignment | **<2ms** | ✅ pure | "nhắc gì→hiện nấy" verified |
+| buildEntityGraph (8 scene) | graphEntity | **2ms** (40 ent/48 edge) | ✅ pure | graph traversal |
+| Semantic scene VLM | sceneVlm ARK / TwelveLabs | _cloud, vài phút index_ | ✅ cloud | ≈90% TwelveLabs (B') |
+| Vectorize ảnh | vectorize ImageTracer | _bounded maxDim 512_ | ✅ pure-JS in-browser | $0, no-wasm |
+| Voice / Graphic gen | ElevenLabs / BytePlus | _cloud_ | ✅ cloud | cần API key (Vercel) |
+> Selftest pure (headless, 0-key): scenecut 8 · scenecut-eval 10 · transnet 9 · entityhit 10 · graph 10 · vectorize 6 · script 22 · broll 13 · semantic 15 · mcp 13. e2e-bench 6 (live LLM).
 
 ## Observability (Moat #3+#5)
 - `pipelineLog` (JSON, sống qua crash) + PerfHud (fps always-on) + WhipTrace (live). MCP đọc timeline/cuts/graph + edit (split/join/place) → agent drive đầy đủ. Xem [[whip-mcp]].
