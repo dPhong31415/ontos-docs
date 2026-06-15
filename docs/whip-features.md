@@ -9,6 +9,7 @@ sidebar_position: 4
 
 > Mỗi tính năng có: mô tả ngắn, tại sao quan trọng, luồng logic step-by-step, và trạng thái hiện tại.
 > Trạng thái P0/P1/P2 và so sánh với AE/CapCut/DaVinci: xem [MVP Status & Roadmap](./whip-mvp-scope).
+> **Bản đồ tính năng ↔ UI ↔ component ↔ engine ↔ trạng thái (index chống drift):** xem [Feature Map](./whip-feature-map).
 
 ---
 

@@ -63,79 +63,71 @@ User cut tại Word[w_042]
 
 ---
 
-## Moat 2 — Browser-Native AI Pipeline (Zero-Upload, ~$0 Inference)
+## Moat 2 — Glass-Box Agent + Pro Override (Trust + Control trên cùng Semantic Substrate)
 
-> **Note (14/06/2026):** "Local-first" như một positioning marketing bị drop — quá hẹp và dễ bị hiểu nhầm. Moat thật là **technical pipeline** (WebGPU + WebCodecs + WASM SIMD): inference chạy trong browser, không cần upload, chi phí ~$0. Đây là moat kỹ thuật, không phải privacy claim.
+> **Pivot (16/06/2026):** Moat #2 cũ ("Browser-Native / Local-First / Zero-Upload") bị DROP. Lý do thực chiến:
+> (1) Local-first transcribe (Whisper ONNX in-browser) **không production-ready** — whisper-tiny không hỗ trợ
+> word-timestamp + native-WASM OOM crash tab → đã gỡ, transcribe giờ chạy **Deepgram cloud**. (2) "Browser-native
+> render" là kỹ thuật thật nhưng **không defensible** — CapCut đã có WASM pipeline; privacy/no-upload thì DaVinci
+> desktop sẵn local. Bỏ claim không giữ được. Nội dung kỹ thuật còn đúng (WebCodecs render, storage tiering) tụt
+> xuống **enabler**, không còn là moat. Moat thật nằm ở chỗ **white space chưa ai chiếm** (research SOTA-2026, dưới).
 
-### Vấn đề hiện tại
+### Vấn đề: thị trường 2026 chia 2 phe, không ai đứng giữa
 
-- Premiere/DaVinci: cài 10-30GB, cần GPU mạnh, không web
-- CapCut web: WebCodecs/WASM rendering tốt, nhưng AI features là **server-side ByteDance** — latency cao, $5+/session cost
-- Descript: Whisper qua OpenAI API (cloud), Temporal.io backend → latency + cost
-- **Mọi web editor**: AI analysis = upload video lên cloud → chờ, tốn tiền, phụ thuộc internet
-- TwelveLabs: video understanding tốt nhất, nhưng upload required → $12/30 phút
+| | Black-box shorts (Opus Clip, Submagic, Captions/Mirage) | Pro NLE (DaVinci 20, Premiere) |
+|---|---|---|
+| Agent tự dựng | ✅ nhưng **mù** — không vừa ý chỉ re-roll cầu may | ❌ làm tay |
+| Sửa frame-accurate | ❌ không control tinh | ✅ |
+| Mọi quyết định AI **soi + sửa được** | ❌ hộp đen | — (không có agent) |
 
-### Whip: Zero-Upload AI + Dense Local Signals
+- **Descript** đã có "semantic timeline" nhưng **chỉ cho LỜI NÓI** (xoá chữ → mất video), không phủ visual event, không phải graph substrate.
+- **Agentic auto-edit đang thành table-stakes** (Opus cũng đi agentic) → "agent dựng được" KHÔNG còn là moat. Moat là **agent + con người giữ quyền kiểm soát**.
 
-**Signal extraction local (ingestion-time, 1 lần khi import):**
+### Whip: agent làm nặng, creator override CHÍNH XÁC bất kỳ quyết định nào
+
+Mọi nước đi của agent (cut, match b-roll, behavior, caption) là **node trên Semantic Graph** (Moat #1) — không phải pixel-macro hộp đen. Hệ quả:
+
 ```
-MediaPipe (WebGL2 delegate) chạy qua toàn bộ video 1 lần
-→ FaceEvent[] + GestureEvent[] + PoseEvent[] cache vào OntologyGraph
-→ $0, không upload frame nào, không phụ thuộc cloud
-
-Whisper ONNX (WASM+SIMD — faster than WebGPU for decoder loop)
-→ Word[] với UUID per word, confidence per word
-→ ~5.9s cho 60s audio trên desktop, $0
-
-Benchmark thực: WASM+SIMD beats WebGPU cho Whisper vì autoregressive
-decoder bottleneck. GPU underutilized giữa decode steps.
-(nguồn: Transformers.js issue #894, Mac M2 benchmark)
+Agent  → cut_at_word("w_3f8a2b") · place_broll("span_007") · synthesize_behavior(...)
+           │  mỗi quyết định = node có lý do (why) + nguồn (source) hiện trên timeline
+           ▼
+Creator → soi được "vì sao agent cắt ở đây" → sửa 1 node (kéo pill / đổi match / chỉnh keyframe)
+           → KHÔNG re-roll cả video; KHÔNG mất phần khác
+           → mỗi override = signal học gu (Moat #4)
 ```
+
+**Luận điểm bán hàng:** *Opus cho tốc độ nhưng mất kiểm soát; DaVinci cho kiểm soát nhưng phải làm tay. Whip cho cả hai — agent dựng, bạn override chính xác, vì mọi edit của AI đều minh bạch và sửa được.* Đây là thứ creator chuyên nghiệp cần để **dám dùng AI cho công việc thật** (trust + control).
+
+### Vì sao đây là moat (không phải feature)
+- **Cần Semantic Graph làm nền** (Moat #1) mới soi/sửa từng quyết định agent được — black-box shorts không có substrate này, phải rebuild từ đầu.
+- **Braid với Moat #3 + #4:** agent drive graph (#3), mỗi override sinh signal học gu (#4) → càng dùng càng đúng, không clone được.
+- Đối thủ phải chọn: hoặc black-box (mất control), hoặc pro-manual (mất agent). Whip ở giữa **vì có graph substrate** — không bắc cầu được nếu thiếu Moat #1.
+
+### Enabler kỹ thuật (đúng, nhưng KHÔNG phải moat) — Browser-native render + storage tiering
+
+> Vẫn là lợi thế vận hành thật (margin, instant-on), nhưng dễ bị copy → coi là enabler, không claim là moat.
 
 **GPUExternalTexture zero-copy render:**
 ```
-File SSD → WebCodecs (hardware decode) → VideoFrame
-                                              │ GPUExternalTexture (zero-copy)
-                                              │ CPU không touch pixel
-                                              ▼
-                                         GPU Texture → WGSL Shader → Canvas
+File SSD → WebCodecs (hardware decode) → VideoFrame → GPUExternalTexture (zero-copy)
+         → GPU Texture → WGSL Shader → Canvas      (CPU gần idle; ~1ms/frame desktop)
 ```
-CPU gần như idle trong render. WebGPU compute: ~1ms/frame desktop (vs 10–20ms JS pixel loop).
-Benchmark: web.dev AI Video Upscaler case study — 250k MAU, 10,000 videos/ngày, $0 server cost.
 
-**Storage tiered — file chục GB không crash (implement 06/2026, đã sửa từ "OPFS là tất cả"):**
-
-> ⚠️ OPFS KHÔNG phải "chân ái" cho mọi thứ. Copy bản gốc 20GB VÀO OPFS = nhân đôi đĩa + crash
-> (đã đụng thật). Mỗi tầng lưu trữ làm 1 nhiệm vụ:
+**Storage tiered — file chục GB không crash:**
 
 | Tầng | Giữ gì | Vì sao |
 |---|---|---|
-| **File System Access handle** (IndexedDB) | **bản GỐC** (chục GB) | trỏ file trên đĩa, **0 copy**. `<video src=blobURL>` stream byte-range → không full-load RAM (~2–4GB limit). Reload xin lại quyền 1 click. |
-| **OPFS** | **derived nhỏ-mà-nóng**: proxy 540p, poster, graph, transcript | nhanh nhất browser (sync access handle), đọc liên tục lúc edit. KHÔNG để bản gốc to ở đây. |
-| **RAM** | chỉ frame đang decode + UI state | encoder/poster serialize 1/lần + memory guard auto-pause khi >2.2GB |
+| **File System Access handle** (IndexedDB) | **bản GỐC** (chục GB) | trỏ file trên đĩa, **0 copy**; stream byte-range, không full-load RAM. |
+| **OPFS** | **derived nhỏ-mà-nóng**: proxy 540p, poster, graph, transcript | nhanh nhất browser, đọc liên tục lúc edit. KHÔNG để bản gốc to ở đây. |
+| **RAM** | chỉ frame đang decode + UI state | serialize encoder/poster + memory guard auto-pause khi >2.2GB |
 
-```
-Edit:   preview chạy PROXY 540p (mượt). Original chỉ stream khi cần.
-Export: re-point compositor về GỐC 4K (full-res). Proxy chỉ lo preview.
-Observe: pipelineLog (JSON, sống qua crash) + observe-state + memory guard (Moat #5).
-```
+Files: `assetHandles.ts`, `proxyTranscode.ts` (WebCodecs 540p), `assetStore.ts` (OPFS), `observe.ts` + `pipelineLog.ts`.
 
-Files: `assetHandles.ts` (handle store), `proxyTranscode.ts` (WebCodecs 540p), `assetStore.ts` (OPFS proxy/poster),
-`observe.ts` + `pipelineLog.ts` (memory guard + log). Chi tiết: `whip-architecture.md` §Storage.
-
-**Chi phí AI thực tế:**
-- MediaPipe (gesture/expression/pose): **$0**, WebGL2 local
-- Whisper ONNX (transcription): **$0**, WASM+SIMD local
-- RMBG (background removal): **$0**, WebGPU compute local
-- Claude Haiku (text-only synthesis): ~$0.001/phút
-- Deepgram (transcription fallback nếu cần): $0.004/phút
-- **30 phút video: ~$0.03 tổng**. TwelveLabs: $12. CapCut AI: $5+ server cost.
-
-**Tại sao đây là moat:**
-- WebCodecs + GPUExternalTexture + OPFS pipeline cần expertise browser internals sâu — không copy được
-- MediaPipe WebGL2 ingestion-time (toàn bộ video, dense signals) chưa có editor nào làm được
-- Zero upload = zero latency wait + $0 server cost → margin cao hơn mọi cloud competitor
-- CapCut có WebAssembly pipeline cho rendering, nhưng AI vẫn server-side → Whip ~$0.03/30 min vs CapCut $5+
+**Chi phí AI thực tế (transcribe giờ cloud, không còn $0 toàn-phần):**
+- Transcription: **Deepgram cloud** ~$0.004/phút (Whisper local đã gỡ)
+- MediaPipe (gesture/expression/pose) + RMBG (background): **$0**, WebGL2/WebGPU local
+- Claude Haiku (text synthesis): ~$0.001/phút
+- **30 phút video: ~$0.15 tổng** vẫn rẻ hơn TwelveLabs ($12) / CapCut AI ($5+ server).
 
 ---
 
@@ -324,13 +316,13 @@ Moat 4 (Creator Lock-in)
     ▼
 Moat 1 (lại) → output tốt hơn → creator dùng nhiều hơn → loop
 
-Moat 2 (Local WebGPU)
-    │ Ingestion Worker fill OntologyGraph
+Moat 2 (Glass-Box Agent + Pro Override)
+    │ Mỗi quyết định agent = node soi/sửa được trên graph
     ▼
-Moat 1 → richer signals → better behaviors
+Moat 4 → mỗi override = signal học gu → output đúng dần
 
 Moat 5 (Thread Architecture)
-    │ Giữ 60fps khi Moat 2 đang ingest + Moat 3 đang synthesize
+    │ Giữ 60fps khi Moat 3 đang synthesize + ingest chạy nền
     ▼
 UX tốt → creator dùng nhiều → Moat 4 tích lũy nhanh hơn
 ```
