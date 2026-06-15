@@ -2,7 +2,7 @@
 id: whip-data-model
 title: Data Model & OntologyGraph
 sidebar_label: 📐 Data Model
-sidebar_position: 4
+sidebar_position: 5
 ---
 
 # Data Model & OntologyGraph

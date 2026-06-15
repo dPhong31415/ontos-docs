@@ -2,7 +2,7 @@
 id: whip-preset-builder
 title: Preset Builder (Node Graph)
 sidebar_label: 🔧 Preset Builder
-sidebar_position: 7
+sidebar_position: 11
 ---
 
 # Preset Builder — Visual Node Graph

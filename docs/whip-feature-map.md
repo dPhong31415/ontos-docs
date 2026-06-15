@@ -2,7 +2,7 @@
 id: whip-feature-map
 title: Feature Map — Tính năng ↔ UI ↔ Component ↔ Engine
 sidebar_label: 🗺 Feature Map
-sidebar_position: 5
+sidebar_position: 6
 ---
 
 # Feature Map — bản đồ liên kết hệ thống

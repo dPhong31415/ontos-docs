@@ -2,7 +2,7 @@
 id: whip-properties
 title: Properties Reference
 sidebar_label: 📐 Properties Reference
-sidebar_position: 5
+sidebar_position: 10
 ---
 
 # Properties Reference — schema × data type × UI component

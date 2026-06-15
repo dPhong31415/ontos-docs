@@ -2,7 +2,7 @@
 id: whip-api
 title: Command API
 sidebar_label: 🔌 Command API
-sidebar_position: 5
+sidebar_position: 12
 ---
 
 # Command API

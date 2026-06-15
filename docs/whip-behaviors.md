@@ -2,7 +2,7 @@
 id: whip-behaviors
 title: Smart Animation (Behaviors)
 sidebar_label: 🎚 Smart Animation
-sidebar_position: 5
+sidebar_position: 9
 ---
 
 # Smart Animation — Behavior System
