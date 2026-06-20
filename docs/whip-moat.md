@@ -7,6 +7,10 @@ sidebar_position: 2
 
 # Tại sao Whip sẽ thắng — 5 Moat
 
+> **Spine vision:** [whip-levels.md](./whip-levels.md) — Mô hình Tầng Trừu Tượng + Timeline 3D. Đó là *mái
+> nhà* gom 5 moat: video có nhiều tầng tư duy (cut → semantic → cảm giác), user nhảy tầng, semantic tự dàn
+> tầng dưới (cascade). Đọc cùng doc này.
+>
 > **Moat** = thứ khiến đối thủ khó copy, dù họ có tiền và kỹ sư.
 > Mỗi moat dưới đây có lý do kỹ thuật cụ thể **vì sao Adobe/CapCut không thể làm được trong 2 năm**.
 > Quan trọng hơn: 5 moat này **khuếch đại lẫn nhau** — không phải 5 feature độc lập.
@@ -190,6 +194,10 @@ Orchestrator Agent
 
 ## Moat 4 — Creator Lock-in Thật Sự (Semantic Style Graph)
 
+> **Kế hoạch chi tiết:** [whip-archetype.md](./whip-archetype.md) — Archetype Library (general profile per
+> dạng kể chuyện) + học tích luỹ hierarchical Bayesian + bật rules. Đây là đường biến Moat #4 từ "bắt chước
+> 1 reel" → "thư viện công thức theo dạng kể chuyện, compound theo thời gian". (Kế hoạch 20/06, chờ duyệt.)
+
 > **Trạng thái implement 13/06/2026:** Đã có **thư viện WhipStyle + recommendation** (bước 1 của moat).
 > Creator Style Graph học-theo-thời-gian (Bayesian, bên dưới) là ĐÍCH, chưa làm.
 >
@@ -198,9 +206,18 @@ Orchestrator Agent
 > (talking-head/montage/...). Whip It phân tích input → auto-apply style hợp nhất; user đổi qua `StylePicker`.
 > Caption có 5 highlight mode (color/box/underline/scale/bounce) render trong compositor.
 >
+> **Cập nhật 19/06/2026 — cut profile DRIVE edit thật (không chỉ hiển thị):** `ReferenceStyleGraph.curves.cutDensity`
+> (cut/giây theo normalized time, đo từ scene-cut THẬT của reel mẫu) trước đây chỉ vẽ trong StyleGraphModal.
+> Nay `styleGraphToWhipParams` xuất `cutProfile` (cutDensity chuẩn hoá theo đỉnh, 0..1) → `deriveInsertionIntents`
+> phân bổ chèn b-roll theo HÌNH DẠNG nhịp cắt mẫu: dồn ở vùng mẫu cắt nhanh (hook), thưa ở vùng giữ chậm
+> (context). Trước đây chỉ dùng 1 số trung bình `rhythm.cutEverySec` → ra tổng `maxIntents` rồi rải đều theo
+> priority ngữ nghĩa (mất "hình dạng" theo thời gian). Sàn 0.4 giữ span cực-visual vẫn có cửa ở vùng chậm; vùng
+> cắt-nhanh cho phép chèn sát hơn (gap−1). Profile rỗng → fallback nhịp đều cũ. Test: `selftest:broll` [5] (16/16).
+>
 > **CHƯA (research-grade):** phân tích VISION từ video mẫu (OCR caption sample + scene-cut detection +
 > font-match) để replicate "y chang" 1 reference reel. Hiện recommend theo input type, không clone từ sample.
-> Style Graph học per-creator Bayesian cũng chưa làm.
+> Style Graph học per-creator Bayesian cũng chưa làm. `motionIntensity` curve vẫn suy ra từ cutDensity/2 (chưa
+> đo motion thật); footage-story path (`recipeFromStyleGraph`/`planFootageStory`) chưa nhận cutProfile.
 
 ### Vấn đề với lock-in hiện tại
 
